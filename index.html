@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HappyFarm</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div class="title">
+          <div class="title__name">HappyFarm</div>
+          <div class="title__hint">5 minutes = 1 day · Weather affects growth</div>
+        </div>
+        <div class="hud" aria-label="Game status">
+          <div class="hud__item"><span class="hud__label">Day</span> <span id="dayValue">1</span></div>
+          <div class="hud__item"><span class="hud__label">Time</span> <span id="timeValue">12 AM</span></div>
+          <div class="hud__item">
+            <span class="hud__label">Weather</span>
+            <span class="hud__weather">
+              <span id="weatherIcon" class="weatherIcon" aria-hidden="true">☀️</span>
+              <span id="weatherValue">Sun</span>
+            </span>
+          </div>
+          <div class="hud__item"><span class="hud__label">Change</span> <span id="weatherChanceValue">50%</span></div>
+          <div class="hud__item"><span class="hud__label">Money</span> €<span id="moneyValue">0</span></div>
+          <div class="hud__item hud__item--btn">
+            <button id="pauseBtn" class="btn pauseBtn" type="button">Pause</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="gameWrap" aria-label="Farm view">
+          <div id="grid" class="grid" role="grid" aria-label="Farm grid"></div>
+          <div class="legend" aria-label="Controls">
+            <div class="legend__row"><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> Move</div>
+            <div class="legend__row"><span class="kbd">Space</span> Plant seed on current empty field tile</div>
+            <div class="legend__row"><span class="kbd">E</span> Harvest fully-grown crop on current tile</div>
+          </div>
+        </section>
+
+        <aside class="panel" aria-label="Shop and actions">
+          <div class="card">
+            <div class="card__title">Seed Shop</div>
+            <div class="shopRow">
+              <label class="label" for="seedSelect">Seed</label>
+              <select id="seedSelect" class="select"></select>
+            </div>
+            <div class="shopRow">
+              <button id="buySeedBtn" class="btn btn--primary" type="button">Buy 1 seed</button>
+              <div class="small" id="seedInfo"></div>
+            </div>
+            <div class="shopRow">
+              <div class="small">
+                Inventory:
+                <span id="inventoryValue">—</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__title">Weather Machine</div>
+            <div class="weatherMachineRow" role="group" aria-label="Set tomorrow weather">
+              <button id="weatherMachineSunBtn" class="btn btn--weather" type="button">
+                ☀️ Sun
+              </button>
+              <button id="weatherMachineRainBtn" class="btn btn--weather" type="button">
+                🌧️ Rain
+              </button>
+            </div>
+            <div class="small" id="weatherMachineInfo">Tomorrow: ☀️ Sun</div>
+            <div class="shopRow">
+              <div class="label">Spend €</div>
+              <div class="loadRow">
+                <input
+                  id="weatherMachineSpendInput"
+                  class="fileInput"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value="0"
+                />
+                <button id="weatherMachineSpendBtn" class="btn btn--primary" type="button">Pay</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__title">Save / Load (CSV)</div>
+            <div class="shopRow">
+              <div class="label">Save</div>
+              <button id="saveCsvBtn" class="btn btn--primary" type="button">Download CSV</button>
+            </div>
+            <div class="shopRow">
+              <div class="label">Load</div>
+              <div class="loadRow">
+                <input id="loadCsvInput" class="fileInput" type="file" accept=".csv" />
+                <button id="loadCsvBtn" class="btn" type="button">Upload</button>
+              </div>
+            </div>
+            <div class="small" id="saveLoadStatus"></div>
+          </div>
+
+          <div class="card">
+            <div class="card__title">How it works</div>
+            <ul class="list">
+              <li>Outer ring is a <b>path</b>; the inner 12×12 is <b>field</b>.</li>
+              <li>The field starts empty; buy seeds, then plant.</li>
+              <li>Weather changes each day and multiplies growth.</li>
+              <li>Planting consumes a seed; harvesting earns money.</li>
+            </ul>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="./game.js"></script>
+  </body>
+</html>
