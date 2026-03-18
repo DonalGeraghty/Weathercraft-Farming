@@ -38,6 +38,11 @@
             <div class="legend__row"><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> Move</div>
             <div class="legend__row"><span class="kbd">Space</span> Plant seed on current empty field tile</div>
             <div class="legend__row"><span class="kbd">E</span> Harvest fully-grown crop on current tile</div>
+            <div class="legend__hintPanel">
+              Keys: <b>1</b>=Carrot, <b>2</b>=Onion, <b>3</b>=Cabbage, <b>4</b>=Watercress, <b>5</b>=Cactus Fruit
+            </div>
+            <div class="legend__row"><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span><span class="kbd">5</span> Select seed</div>
+            <div class="legend__row"><span class="kbd">B</span> Buy 1 seed</div>
           </div>
         </section>
 
@@ -48,15 +53,13 @@
               <label class="label" for="seedSelect">Seed</label>
               <select id="seedSelect" class="select"></select>
             </div>
-            <div class="shopRow">
+            <div class="seedActions">
               <button id="buySeedBtn" class="btn btn--primary" type="button">Buy 1 seed</button>
               <div class="small" id="seedInfo"></div>
             </div>
-            <div class="shopRow">
-              <div class="small">
-                Inventory:
-                <span id="inventoryValue">—</span>
-              </div>
+
+            <div class="seedInventory small">
+              Inventory: <span id="inventoryValue">—</span>
             </div>
           </div>
 

@@ -8,7 +8,7 @@ const CROPS = {
     name: "Carrot",
     color: "#ff8a3d",
     label: "C",
-    daysToGrow: 10,
+    daysToGrow: 6,
     weatherGrowthMultipliers: { sun: 1.35, rain: 0.7 },
     seedCost: 3,
     harvestValue: 8,
@@ -18,7 +18,7 @@ const CROPS = {
     name: "Onion",
     color: "#f0d5ff",
     label: "O",
-    daysToGrow: 10,
+    daysToGrow: 8,
     weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
     seedCost: 4,
     harvestValue: 10,
@@ -123,6 +123,8 @@ const state = {
   tiles: [],
   paused: false,
 };
+
+const SEED_KEY_ORDER = ["carrot", "onion", "cabbage", "watercress", "cactusFruit"];
 
 function createInitialTiles() {
   const tiles = [];
@@ -550,14 +552,22 @@ function bindUi() {
     updateHighlights();
   });
 
-  document.getElementById("buySeedBtn").addEventListener("click", () => {
+  function tryBuySelectedSeed(count = 1) {
     const crop = CROPS[state.selectedSeedId];
     if (!crop) return;
-    if (state.money < crop.seedCost) return;
-    state.money -= crop.seedCost;
-    state.inventory[crop.id] = (state.inventory[crop.id] ?? 0) + 1;
+    if (count <= 0) return;
+    const cost = crop.seedCost * count;
+    if (state.money < cost) return;
+
+    state.money -= cost;
+    state.inventory[crop.id] = (state.inventory[crop.id] ?? 0) + count;
     updateHud();
     updateShopInfo();
+    updateWeatherMachineUi();
+  }
+
+  document.getElementById("buySeedBtn").addEventListener("click", () => {
+    tryBuySelectedSeed(1);
   });
 
   document.getElementById("weatherMachineSunBtn").addEventListener("click", () => {
@@ -608,6 +618,24 @@ function bindUi() {
     if (key === "d" || key === "arrowright") tryMove(1, 0);
     if (key === " ") tryPlantHere();
     if (key === "e") tryHarvestHere();
+
+    // Keyboard-only shop controls:
+    // 1-5 selects seed; B buys one seed.
+    if (/^[1-5]$/.test(e.key)) {
+      const idx = Number(e.key) - 1;
+      const nextSeedId = SEED_KEY_ORDER[idx];
+      if (nextSeedId) {
+        state.selectedSeedId = nextSeedId;
+        if (seedSelect) seedSelect.value = nextSeedId;
+        updateShopInfo();
+        updateHighlights();
+      }
+    }
+    if (key === "b") {
+      // Optional: Shift+B buys 5 if possible.
+      const count = e.shiftKey ? 5 : 1;
+      tryBuySelectedSeed(count);
+    }
   });
 
   updateShopInfo();
