@@ -112,12 +112,14 @@ body{
 }
 
 .gameWrap.weather--sun{
-  --field: #2f5a2a;
-  --field2: #356438;
+  /* Slightly more yellow-green than default */
+  --field: #3a5f2a;
+  --field2: #3f6a32;
 }
 .gameWrap.weather--rain{
-  --field: #2a4a3f;
-  --field2: #30555a;
+  /* Keep it green (not blue). Waterlogged tiles handle the blue overlay. */
+  --field: #2c4a26;
+  --field2: #2f552a;
 }
 
 .grid{
@@ -159,11 +161,31 @@ body{
 }
 
 .tile--waterlogged{
-  /* Solid dark blue so it looks the same on top of any green shade. */
-  background:
-    radial-gradient(18px 14px at 30% 20%, rgba(255,255,255,0.08), rgba(255,255,255,0) 60%),
-    linear-gradient(180deg, rgba(8,32,86,1), rgba(5,18,52,1));
-  border-color: rgba(80,180,255,0.55);
+  /* Ensure the underlying field background never shows through. */
+  background: transparent !important;
+  border-color: rgba(120,200,255,0.70);
+}
+.tile--waterlogged::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #0a2d7c, #05183d);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tile--scorched{
+  /* Ensure the underlying field background never shows through. */
+  background: transparent !important;
+  border-color: rgba(255,230,120,0.75);
+}
+.tile--scorched::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #c58a00, #6b3f00);
+  z-index: 1;
+  pointer-events: none;
 }
 
 .crop{
@@ -176,6 +198,7 @@ body{
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.18);
   background: rgba(255,255,255,0.10);
+  z-index: 2;
 }
 .crop[data-stage="seed"]{
   width: 10px; height: 10px; border-radius: 999px;
@@ -215,6 +238,25 @@ body{
   background: linear-gradient(90deg, rgba(98,211,111,0.95), rgba(139,211,255,0.95));
 }
 
+.harvestReady{
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 6px;
+  background: rgba(255, 220, 80, 0.95);
+  color: rgba(25, 12, 0, 0.92);
+  font-weight: 900;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  pointer-events: none;
+  border: 1px solid rgba(0,0,0,0.18);
+}
+
 .farmer{
   position: absolute;
   inset: 0;
@@ -222,6 +264,7 @@ body{
   place-items: center;
   font-size: 18px;
   filter: drop-shadow(0 8px 10px rgba(0,0,0,0.35));
+  z-index: 2;
 }
 
 .legend{

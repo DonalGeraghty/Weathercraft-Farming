@@ -1,6 +1,6 @@
 const WORLD_SIZE = 14; // includes path ring
 const FIELD_SIZE = 12; // inner farm
-const MS_PER_DAY = 300_000; // 5 minutes real time = 1 in-game day
+const MS_PER_DAY = 100_000; // 5 minutes real time = 1 in-game day
 
 const CROPS = {
   carrot: {
@@ -33,6 +33,31 @@ const CROPS = {
     seedCost: 5,
     harvestValue: 13,
   },
+  watercress: {
+    id: "watercress",
+    name: "Watercress",
+    // Teal/green so it reads well vs waterlogged/scorched overlays.
+    color: "#37e6d2",
+    label: "W",
+    daysToGrow: 10,
+    weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
+    seedCost: 6,
+    harvestValue: 16,
+    // Extra growth when adjacent to waterlogged cells.
+    adjacentWaterloggedGrowthMultiplier: 4.0,
+  },
+  cactusFruit: {
+    id: "cactusFruit",
+    name: "Cactus Fruit",
+    color: "#f7a93c",
+    label: "F",
+    daysToGrow: 10,
+    weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
+    seedCost: 8,
+    harvestValue: 22,
+    // Extra growth when planted directly on scorched cells.
+    scorchedGrowthMultiplier: 3.5,
+  },
 };
 
 const WEATHER = {
@@ -40,7 +65,7 @@ const WEATHER = {
   rain: { id: "rain", name: "Rain", growthMultiplier: 1.35 },
 };
 
-const WEATHER_BASE_CHANGE_CHANCE = 0.0; // 0% at the start
+const WEATHER_BASE_CHANGE_CHANCE = 0.5; // 50% at the start
 const WEATHER_CHANGE_CHANCE_PER_EURO = 0.1; // +10% per € spent
 
 function clamp01(n) {
@@ -105,7 +130,7 @@ function createInitialTiles() {
     for (let x = 0; x < WORLD_SIZE; x++) {
       const kind = isField(x, y) ? "field" : "path";
       let crop = null;
-      tiles.push({ kind, crop, waterlogged: false });
+      tiles.push({ kind, crop, waterlogged: false, scorched: false });
     }
   }
   return tiles;
@@ -129,15 +154,16 @@ function exportStateToCsv() {
       state.inventory.cabbage ?? 0,
     ].join(","),
   );
-  lines.push("x,y,waterlogged,cropId,progress");
+  lines.push("x,y,waterlogged,scorched,cropId,progress");
 
   for (let y = 1; y <= FIELD_SIZE; y++) {
     for (let x = 1; x <= FIELD_SIZE; x++) {
       const tile = state.tiles[tileIndex(x, y)];
       const waterlogged = tile?.waterlogged ? "1" : "0";
+      const scorched = tile?.scorched ? "1" : "0";
       const cropId = tile?.crop ? tile.crop.cropId : "";
       const progress = tile?.crop ? tile.crop.progress : "";
-      lines.push([x, y, waterlogged, cropId, progress].join(","));
+      lines.push([x, y, waterlogged, scorched, cropId, progress].join(","));
     }
   }
 
@@ -198,29 +224,42 @@ function importStateFromCsv(csvText) {
     const y = Number(row[1]);
     if (!isField(x, y)) continue;
     const waterlogged = row[2] === "1";
-    const cropId = row[3];
-    const progress = row[4] === "" ? "" : Number(row[4]);
+
+    // Support both:
+    // - v1: x,y,waterlogged,cropId,progress
+    // - v2: x,y,waterlogged,scorched,cropId,progress
+    const hasScorchedCol = row.length >= 6;
+    const scorched = hasScorchedCol ? row[3] === "1" : false;
+    const cropId = hasScorchedCol ? row[4] : row[3];
+    const progress = hasScorchedCol ? row[5] : row[4];
 
     const tile = state.tiles[tileIndex(x, y)];
     if (!tile) continue;
 
     tile.waterlogged = waterlogged;
+    tile.scorched = scorched;
+
+    // Waterlogged always kills any crop.
     if (waterlogged) {
-      tile.crop = null; // keep consistent with rain rules
+      tile.crop = null;
+      continue;
+    }
+
+    // Scorched kills all crops except cactus fruit.
+    if (scorched && cropId !== "cactusFruit") {
+      tile.crop = null;
       continue;
     }
 
     if (cropId && CROPS[cropId]) {
-      tile.crop = { cropId, progress: clamp01(progress || 0) };
+      tile.crop = { cropId, progress: progress === "" ? 0 : clamp01(Number(progress) || 0) };
     } else {
       tile.crop = null;
     }
   }
 
-  // If it's sunny (dry day), ensure we clear any waterlogged cells immediately.
-  if (state.weatherId !== "rain") {
-    clearWaterloggedCells();
-  }
+  // Ensure any loaded crops obey the hazard placement rules.
+  enforceHazardPlantValidity();
 
   setWeatherTheme();
   updateWeatherMachineUi();
@@ -299,6 +338,55 @@ function fieldCount() {
   return FIELD_SIZE * FIELD_SIZE;
 }
 
+function isAdjacentToWaterlogged(x, y) {
+  const neighbors = [
+    { x: x + 1, y },
+    { x: x - 1, y },
+    { x, y: y + 1 },
+    { x, y: y - 1 },
+  ];
+  for (const n of neighbors) {
+    if (n.x < 0 || n.y < 0 || n.x >= WORLD_SIZE || n.y >= WORLD_SIZE) continue;
+    if (!isField(n.x, n.y)) continue;
+    const tile = state.tiles[tileIndex(n.x, n.y)];
+    if (tile?.kind === "field" && tile.waterlogged) return true;
+  }
+  return false;
+}
+
+function enforceHazardPlantValidity() {
+  for (let idx = 0; idx < state.tiles.length; idx++) {
+    const tile = state.tiles[idx];
+    if (tile.kind !== "field" || !tile.crop) continue;
+
+    const x = idx % WORLD_SIZE;
+    const y = Math.floor(idx / WORLD_SIZE);
+    const cropId = tile.crop.cropId;
+
+    // Regular crops should never exist on hazards (they would have been destroyed when hazards were created).
+    if (cropId !== "cactusFruit" && cropId !== "watercress") {
+      if (tile.waterlogged || tile.scorched) tile.crop = null;
+      continue;
+    }
+
+    if (cropId === "cactusFruit") {
+      if (!tile.scorched) tile.crop = null;
+      continue;
+    }
+
+    // watercress rules:
+    // - It can only exist if adjacent to waterlogged cells.
+    // - It should not be on scorched or waterlogged cells.
+    if (cropId === "watercress") {
+      if (tile.waterlogged || tile.scorched) {
+        tile.crop = null;
+        continue;
+      }
+      if (!isAdjacentToWaterlogged(x, y)) tile.crop = null;
+    }
+  }
+}
+
 function clearWaterloggedCells() {
   for (const tile of state.tiles) {
     if (tile.kind !== "field") continue;
@@ -306,11 +394,74 @@ function clearWaterloggedCells() {
   }
 }
 
-function addWaterloggedCellsForRain() {
-  const dailyFraction = 0.1;
-  const addCount = Math.ceil(fieldCount() * dailyFraction);
+function clearScorchedCells() {
+  for (const tile of state.tiles) {
+    if (tile.kind !== "field") continue;
+    tile.scorched = false;
+  }
+}
 
-  // Select only from field tiles not already waterlogged.
+function addWaterloggedCellsForRain() {
+  // Weather controls how often the land becomes waterlogged.
+  const addCount = 5;
+  addWaterloggedCells(addCount);
+}
+
+function removeHalfWaterloggedCells() {
+  const waterloggedIdxs = [];
+  for (let i = 0; i < state.tiles.length; i++) {
+    const tile = state.tiles[i];
+    if (tile.kind !== "field") continue;
+    if (!tile.waterlogged) continue;
+    waterloggedIdxs.push(i);
+  }
+
+  const removeCount = Math.floor(waterloggedIdxs.length * 0.5);
+  if (removeCount <= 0) return;
+
+  for (let i = waterloggedIdxs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = waterloggedIdxs[i];
+    waterloggedIdxs[i] = waterloggedIdxs[j];
+    waterloggedIdxs[j] = tmp;
+  }
+
+  const toRemove = waterloggedIdxs.slice(0, removeCount);
+  for (const idx of toRemove) state.tiles[idx].waterlogged = false;
+}
+
+function removeHalfScorchedCells() {
+  const scorchedIdxs = [];
+  for (let i = 0; i < state.tiles.length; i++) {
+    const tile = state.tiles[i];
+    if (tile.kind !== "field") continue;
+    if (!tile.scorched) continue;
+    scorchedIdxs.push(i);
+  }
+
+  const removeCount = Math.floor(scorchedIdxs.length * 0.5);
+  if (removeCount <= 0) return;
+
+  for (let i = scorchedIdxs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = scorchedIdxs[i];
+    scorchedIdxs[i] = scorchedIdxs[j];
+    scorchedIdxs[j] = tmp;
+  }
+
+  const toRemove = scorchedIdxs.slice(0, removeCount);
+  for (const idx of toRemove) state.tiles[idx].scorched = false;
+}
+
+function addScorchedCellsForSun() {
+  // Weather controls how often the land becomes scorched.
+  const addCount = 5;
+  addScorchedCells(addCount);
+}
+
+function addWaterloggedCells(addCount) {
+  if (addCount <= 0) return;
+
   const candidates = [];
   for (let i = 0; i < state.tiles.length; i++) {
     const tile = state.tiles[i];
@@ -319,7 +470,7 @@ function addWaterloggedCellsForRain() {
     candidates.push(i);
   }
 
-  // Fisher-Yates shuffle (small list; fine for 144 cells).
+  // Fisher-Yates shuffle.
   for (let i = candidates.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     const tmp = candidates[i];
@@ -331,8 +482,34 @@ function addWaterloggedCellsForRain() {
   for (const idx of toApply) {
     const tile = state.tiles[idx];
     tile.waterlogged = true;
-    // Waterlogged cells destroy any vegetables.
-    tile.crop = null;
+    tile.crop = null; // destroys any vegetables
+  }
+}
+
+function addScorchedCells(addCount) {
+  if (addCount <= 0) return;
+
+  const candidates = [];
+  for (let i = 0; i < state.tiles.length; i++) {
+    const tile = state.tiles[i];
+    if (tile.kind !== "field") continue;
+    if (tile.scorched) continue;
+    candidates.push(i);
+  }
+
+  // Fisher-Yates shuffle.
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = candidates[i];
+    candidates[i] = candidates[j];
+    candidates[j] = tmp;
+  }
+
+  const toApply = candidates.slice(0, addCount);
+  for (const idx of toApply) {
+    const tile = state.tiles[idx];
+    tile.scorched = true;
+    tile.crop = null; // destroys any vegetables
   }
 }
 
@@ -506,10 +683,19 @@ function updateShopInfo() {
   const seedInfo = document.getElementById("seedInfo");
   const sunMult = crop?.weatherGrowthMultipliers?.sun ?? 1;
   const rainMult = crop?.weatherGrowthMultipliers?.rain ?? 1;
+  const waterAdjMult = crop?.adjacentWaterloggedGrowthMultiplier ?? null;
+  const scorchedMult = crop?.scorchedGrowthMultiplier ?? null;
   seedInfo.textContent = crop
-    ? `Have ${invCount}. Harvest €${crop.harvestValue}. Grows in ${crop.daysToGrow} days. Sun x${sunMult.toFixed(
-        2,
-      )}, Rain x${rainMult.toFixed(2)}.`
+    ? [
+        `Have ${invCount}.`,
+        `Harvest €${crop.harvestValue}.`,
+        `Grows in ${crop.daysToGrow} days.`,
+        `Sun x${sunMult.toFixed(2)}, Rain x${rainMult.toFixed(2)}.`,
+        waterAdjMult ? `Adjacent waterlogged: x${waterAdjMult.toFixed(2)}.` : "",
+        scorchedMult ? `On scorched soil: x${scorchedMult.toFixed(2)}.` : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
     : "";
 
   const invParts = [];
@@ -551,9 +737,39 @@ function tick(dtMs) {
   if (state.msIntoDay >= MS_PER_DAY) {
     state.msIntoDay -= MS_PER_DAY;
     state.day += 1;
+    const prevWeather = state.weatherId;
     applyWeatherMachineAtMidnight();
-    if (state.weatherId === "rain") addWaterloggedCellsForRain();
-    else clearWaterloggedCells();
+
+    const nextWeather = state.weatherId;
+    const isSwap = prevWeather !== nextWeather;
+
+    if (nextWeather === "rain") {
+      if (isSwap) {
+        // Sunny -> rainy: 3 new waterlogged, and 2 scorched.
+        addWaterloggedCells(3);
+        addScorchedCells(2);
+      } else {
+        // Regular rainy day: only 5 new waterlogged.
+        addWaterloggedCellsForRain();
+      }
+      // Only shrink scorched on regular rainy days.
+      if (!isSwap) removeHalfScorchedCells();
+    } else {
+      if (isSwap) {
+        // Rainy -> sunny: 3 new scorched, and 2 waterlogged.
+        addScorchedCells(3);
+        addWaterloggedCells(2);
+      } else {
+        // Regular sunny day: only 5 new scorched.
+        addScorchedCellsForSun();
+      }
+      // Only shrink waterlogged on regular sunny days.
+      if (!isSwap) removeHalfWaterloggedCells();
+    }
+
+    // Hazards may have changed what crops are allowed to exist.
+    enforceHazardPlantValidity();
+
     setWeatherTheme();
 
     growAllCrops(1);
@@ -569,14 +785,31 @@ function growAllCrops(dayFraction) {
   const w = WEATHER[state.weatherId] ?? WEATHER.sun;
   const globalMultiplier = w.growthMultiplier;
 
-  for (const tile of state.tiles) {
+  for (let idx = 0; idx < state.tiles.length; idx++) {
+    const tile = state.tiles[idx];
     if (tile.kind !== "field" || !tile.crop) continue;
     const cropDef = CROPS[tile.crop.cropId];
     if (!cropDef) continue;
+
+    const x = idx % WORLD_SIZE;
+    const y = Math.floor(idx / WORLD_SIZE);
+
     const daysToGrow = cropDef.daysToGrow > 0 ? cropDef.daysToGrow : 10;
     const growthPerDay = 1 / daysToGrow;
     const cropWeatherMult = cropDef.weatherGrowthMultipliers?.[state.weatherId] ?? 1;
-    const dProgress = growthPerDay * globalMultiplier * cropWeatherMult * dayFraction;
+
+    // Environment effects (waterlogged adjacency / scorched on-tile).
+    let envMult = 1;
+    if (cropDef.adjacentWaterloggedGrowthMultiplier) {
+      if (isAdjacentToWaterlogged(x, y)) {
+        envMult *= cropDef.adjacentWaterloggedGrowthMultiplier;
+      }
+    }
+    if (cropDef.scorchedGrowthMultiplier) {
+      if (tile.scorched) envMult *= cropDef.scorchedGrowthMultiplier;
+    }
+
+    const dProgress = growthPerDay * globalMultiplier * cropWeatherMult * envMult * dayFraction;
     tile.crop.progress = clamp01(tile.crop.progress + dProgress);
   }
 }
@@ -602,13 +835,27 @@ function tryPlantHere() {
   // Only plant if empty or already harvested (no crop).
   if (tile.crop) return;
 
+  const x = state.farmer.x;
+  const y = state.farmer.y;
+
+  // Waterlogged tiles are never plantable.
+  if (tile.waterlogged) return;
+
+  if (cropId === "cactusFruit") {
+    // Cactus fruit can ONLY be placed on scorched earth.
+    if (!tile.scorched) return;
+  } else if (cropId === "watercress") {
+    // Watercress can ONLY be placed adjacent to waterlogged cells.
+    // It also cannot be planted on scorched/waterlogged tiles.
+    if (tile.scorched) return;
+    if (!isAdjacentToWaterlogged(x, y)) return;
+  } else {
+    // Regular crops cannot be planted on scorched earth.
+    if (tile.scorched) return;
+  }
+
   tile.crop = { cropId, progress: 0 };
   state.inventory[cropId] = have - 1;
-
-  // If a tile is already waterlogged during rain, it destroys the planted crop.
-  if (state.weatherId === "rain" && tile.waterlogged) {
-    tile.crop = null;
-  }
 
   updateHud();
   updateHighlights();
@@ -640,12 +887,14 @@ function renderAll() {
 
     // Update dynamic styling.
     el.classList.toggle("tile--waterlogged", tile.kind === "field" && tile.waterlogged);
+    el.classList.toggle("tile--scorched", tile.kind === "field" && tile.scorched);
 
     el.innerHTML = "";
     if (tile.kind === "field" && tile.crop) {
       const cropDef = CROPS[tile.crop.cropId];
       const progress = tile.crop.progress;
       const stage = cropStage(progress);
+      const isHarvestReady = progress >= 1;
 
       const cropEl = document.createElement("div");
       cropEl.className = "crop";
@@ -666,6 +915,14 @@ function renderAll() {
       cropEl.appendChild(bar);
 
       el.appendChild(cropEl);
+
+      if (isHarvestReady) {
+        const ready = document.createElement("div");
+        ready.className = "harvestReady";
+        ready.textContent = "!";
+        ready.title = "Ready to harvest (press E)";
+        el.appendChild(ready);
+      }
     }
 
     if (state.farmer.x === x && state.farmer.y === y) {
