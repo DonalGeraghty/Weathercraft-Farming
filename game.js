@@ -132,7 +132,16 @@ function createInitialTiles() {
     for (let x = 0; x < WORLD_SIZE; x++) {
       const kind = isField(x, y) ? "field" : "path";
       let crop = null;
-      tiles.push({ kind, crop, waterlogged: false, scorched: false });
+      tiles.push({
+        kind,
+        crop,
+        waterlogged: false,
+        scorched: false,
+        // Rot lifecycle:
+        // - if a ready crop isn't harvested within 1 in-game day => crop disappears and tile turns black for 1 day
+        blackMsRemaining: 0,
+        readyRotMsRemaining: 0,
+      });
     }
   }
   return tiles;
@@ -140,7 +149,7 @@ function createInitialTiles() {
 
 function exportStateToCsv() {
   const lines = [];
-  lines.push("HappyFarmCSV,1");
+  lines.push("WeathercraftFarmingCSV,1");
   lines.push(
     [
       state.day,
@@ -156,16 +165,18 @@ function exportStateToCsv() {
       state.inventory.cabbage ?? 0,
     ].join(","),
   );
-  lines.push("x,y,waterlogged,scorched,cropId,progress");
+  lines.push("x,y,waterlogged,scorched,blackDaysRemaining,rotDaysRemaining,cropId,progress");
 
   for (let y = 1; y <= FIELD_SIZE; y++) {
     for (let x = 1; x <= FIELD_SIZE; x++) {
       const tile = state.tiles[tileIndex(x, y)];
       const waterlogged = tile?.waterlogged ? "1" : "0";
       const scorched = tile?.scorched ? "1" : "0";
+      const blackDaysRemaining = tile?.blackMsRemaining > 0 ? tile.blackMsRemaining / MS_PER_DAY : 0;
+      const rotDaysRemaining = tile?.readyRotMsRemaining > 0 ? tile.readyRotMsRemaining / MS_PER_DAY : 0;
       const cropId = tile?.crop ? tile.crop.cropId : "";
       const progress = tile?.crop ? tile.crop.progress : "";
-      lines.push([x, y, waterlogged, scorched, cropId, progress].join(","));
+      lines.push([x, y, waterlogged, scorched, blackDaysRemaining, rotDaysRemaining, cropId, progress].join(","));
     }
   }
 
@@ -185,7 +196,7 @@ function importStateFromCsv(csvText) {
     .filter(Boolean);
 
   if (lines.length < 3) throw new Error("CSV is too short.");
-  if (lines[0] !== "HappyFarmCSV,1") throw new Error("Unrecognized CSV format.");
+  if (lines[0] !== "WeathercraftFarmingCSV,1") throw new Error("Unrecognized CSV format.");
 
   const meta = parseCsvLine(lines[1]);
   if (meta.length < 11) throw new Error("CSV meta row is invalid.");
@@ -226,30 +237,64 @@ function importStateFromCsv(csvText) {
     const y = Number(row[1]);
     if (!isField(x, y)) continue;
     const waterlogged = row[2] === "1";
+    let scorched = false;
+    let blackDaysRemaining = 0;
+    let rotDaysRemaining = 0;
+    let cropId = "";
+    let progress = "";
 
-    // Support both:
+    // Supported formats:
     // - v1: x,y,waterlogged,cropId,progress
     // - v2: x,y,waterlogged,scorched,cropId,progress
-    const hasScorchedCol = row.length >= 6;
-    const scorched = hasScorchedCol ? row[3] === "1" : false;
-    const cropId = hasScorchedCol ? row[4] : row[3];
-    const progress = hasScorchedCol ? row[5] : row[4];
+    // - v3: x,y,waterlogged,scorched,blackDaysRemaining,rotDaysRemaining,cropId,progress
+    if (row.length >= 8) {
+      scorched = row[3] === "1";
+      blackDaysRemaining = Number(row[4]) || 0;
+      rotDaysRemaining = Number(row[5]) || 0;
+      cropId = row[6];
+      progress = row[7];
+    } else if (row.length >= 6) {
+      scorched = row[3] === "1";
+      cropId = row[4];
+      progress = row[5];
+    } else {
+      scorched = false;
+      cropId = row[3];
+      progress = row[4];
+    }
 
     const tile = state.tiles[tileIndex(x, y)];
     if (!tile) continue;
 
     tile.waterlogged = waterlogged;
     tile.scorched = scorched;
+    tile.blackMsRemaining = blackDaysRemaining > 0 ? blackDaysRemaining * MS_PER_DAY : 0;
+    tile.readyRotMsRemaining = rotDaysRemaining > 0 ? rotDaysRemaining * MS_PER_DAY : 0;
+
+    // Hazards overwrite rot (waterlogged/scorched remove black/ready timers).
+    if (waterlogged || scorched) {
+      tile.blackMsRemaining = 0;
+      tile.readyRotMsRemaining = 0;
+    }
+
+    // If the tile is black, it must be empty (and rotting timer should be cleared).
+    if (tile.blackMsRemaining > 0) {
+      tile.crop = null;
+      tile.readyRotMsRemaining = 0;
+      continue;
+    }
 
     // Waterlogged always kills any crop.
     if (waterlogged) {
       tile.crop = null;
+      tile.readyRotMsRemaining = 0;
       continue;
     }
 
     // Scorched kills all crops except cactus fruit.
     if (scorched && cropId !== "cactusFruit") {
       tile.crop = null;
+      tile.readyRotMsRemaining = 0;
       continue;
     }
 
@@ -257,6 +302,7 @@ function importStateFromCsv(csvText) {
       tile.crop = { cropId, progress: progress === "" ? 0 : clamp01(Number(progress) || 0) };
     } else {
       tile.crop = null;
+      tile.readyRotMsRemaining = 0;
     }
   }
 
@@ -361,18 +407,30 @@ function enforceHazardPlantValidity() {
     const tile = state.tiles[idx];
     if (tile.kind !== "field" || !tile.crop) continue;
 
+    if (tile.blackMsRemaining > 0) {
+      tile.crop = null;
+      tile.readyRotMsRemaining = 0;
+      continue;
+    }
+
     const x = idx % WORLD_SIZE;
     const y = Math.floor(idx / WORLD_SIZE);
     const cropId = tile.crop.cropId;
 
     // Regular crops should never exist on hazards (they would have been destroyed when hazards were created).
     if (cropId !== "cactusFruit" && cropId !== "watercress") {
-      if (tile.waterlogged || tile.scorched) tile.crop = null;
+      if (tile.waterlogged || tile.scorched) {
+        tile.crop = null;
+        tile.readyRotMsRemaining = 0;
+      }
       continue;
     }
 
     if (cropId === "cactusFruit") {
-      if (!tile.scorched) tile.crop = null;
+      if (!tile.scorched) {
+        tile.crop = null;
+        tile.readyRotMsRemaining = 0;
+      }
       continue;
     }
 
@@ -382,9 +440,13 @@ function enforceHazardPlantValidity() {
     if (cropId === "watercress") {
       if (tile.waterlogged || tile.scorched) {
         tile.crop = null;
+        tile.readyRotMsRemaining = 0;
         continue;
       }
-      if (!isAdjacentToWaterlogged(x, y)) tile.crop = null;
+      if (!isAdjacentToWaterlogged(x, y)) {
+        tile.crop = null;
+        tile.readyRotMsRemaining = 0;
+      }
     }
   }
 }
@@ -485,6 +547,8 @@ function addWaterloggedCells(addCount) {
     const tile = state.tiles[idx];
     tile.waterlogged = true;
     tile.crop = null; // destroys any vegetables
+    tile.readyRotMsRemaining = 0; // prevents rotting after being destroyed
+    tile.blackMsRemaining = 0; // hazards overwrite rot
   }
 }
 
@@ -512,6 +576,8 @@ function addScorchedCells(addCount) {
     const tile = state.tiles[idx];
     tile.scorched = true;
     tile.crop = null; // destroys any vegetables
+    tile.readyRotMsRemaining = 0; // prevents rotting after being destroyed
+    tile.blackMsRemaining = 0; // hazards overwrite rot
   }
 }
 
@@ -655,7 +721,7 @@ function bindUi() {
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = `HappyFarm_state_day${state.day}.csv`;
+      a.download = `WeathercraftFarming_state_day${state.day}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -801,8 +867,10 @@ function tick(dtMs) {
     setWeatherTheme();
 
     growAllCrops(1);
+    updateRotAndBlack(MS_PER_DAY);
   } else {
     growAllCrops(dtMs / MS_PER_DAY);
+    updateRotAndBlack(dtMs);
   }
 
   updateHud();
@@ -842,6 +910,51 @@ function growAllCrops(dayFraction) {
   }
 }
 
+function updateRotAndBlack(dtMs) {
+  for (const tile of state.tiles) {
+    if (tile.kind !== "field") continue;
+
+    // Black tiles count down and block planting.
+    if (tile.blackMsRemaining > 0) {
+      tile.blackMsRemaining -= dtMs;
+      if (tile.blackMsRemaining < 0) tile.blackMsRemaining = 0;
+
+      // If a tile is black, it should never contain a crop.
+      if (tile.crop) {
+        tile.crop = null;
+        tile.readyRotMsRemaining = 0;
+      }
+      continue;
+    }
+
+    // If there is no crop, there's no rotting timer.
+    if (!tile.crop) {
+      tile.readyRotMsRemaining = 0;
+      continue;
+    }
+
+    const isReady = tile.crop.progress >= 1;
+    if (!isReady) {
+      tile.readyRotMsRemaining = 0;
+      continue;
+    }
+
+    // When a crop becomes ready, start the timer but don't decrement on the same update.
+    if (tile.readyRotMsRemaining <= 0) {
+      tile.readyRotMsRemaining = MS_PER_DAY;
+      continue;
+    }
+
+    tile.readyRotMsRemaining -= dtMs;
+    if (tile.readyRotMsRemaining <= 0) {
+      // Rot: crop disappears and the tile becomes black for 1 in-game day.
+      tile.crop = null;
+      tile.readyRotMsRemaining = 0;
+      tile.blackMsRemaining = MS_PER_DAY;
+    }
+  }
+}
+
 function tryMove(dx, dy) {
   const nx = state.farmer.x + dx;
   const ny = state.farmer.y + dy;
@@ -859,6 +972,9 @@ function tryPlantHere() {
 
   const tile = state.tiles[tileIndex(state.farmer.x, state.farmer.y)];
   if (!tile || tile.kind !== "field") return;
+
+  // Rotted tiles are black for 1 in-game day: can't plant.
+  if (tile.blackMsRemaining > 0) return;
 
   // Only plant if empty or already harvested (no crop).
   if (tile.crop) return;
@@ -899,6 +1015,8 @@ function tryHarvestHere() {
 
   state.money += cropDef.harvestValue;
   tile.crop = null;
+  tile.readyRotMsRemaining = 0;
+  tile.blackMsRemaining = 0;
   updateHud();
   updateShopInfo();
   updateHighlights();
@@ -914,11 +1032,13 @@ function renderAll() {
     const tile = state.tiles[i];
 
     // Update dynamic styling.
-    el.classList.toggle("tile--waterlogged", tile.kind === "field" && tile.waterlogged);
-    el.classList.toggle("tile--scorched", tile.kind === "field" && tile.scorched);
+    const isBlack = tile.kind === "field" && tile.blackMsRemaining > 0;
+    el.classList.toggle("tile--waterlogged", tile.kind === "field" && tile.waterlogged && !isBlack);
+    el.classList.toggle("tile--scorched", tile.kind === "field" && tile.scorched && !isBlack);
+    el.classList.toggle("tile--black", isBlack);
 
     el.innerHTML = "";
-    if (tile.kind === "field" && tile.crop) {
+    if (tile.kind === "field" && tile.crop && !isBlack) {
       const cropDef = CROPS[tile.crop.cropId];
       const progress = tile.crop.progress;
       const stage = cropStage(progress);

@@ -188,6 +188,12 @@ body{
   pointer-events: none;
 }
 
+.tile--black{
+  /* Solid black for rotted tiles (no crop planting allowed while active). */
+  background: #050505 !important;
+  border-color: rgba(255,255,255,0.10) !important;
+}
+
 .crop{
   position: absolute;
   left: 50%;
