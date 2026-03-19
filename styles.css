@@ -222,6 +222,16 @@ body{
 .crop[data-stage="grown"]{
   width: 34px; height: 34px; border-radius: 12px;
 }
+.crop[data-crop="cactusFruit"][data-stage="seed"]{
+  width: 18px; height: 18px; border-radius: 999px;
+}
+.crop[data-crop="cactusFruit"][data-stage="sprout"]{
+  width: 28px; height: 28px; border-radius: 12px;
+}
+.crop[data-crop="cactusFruit"][data-stage="grown"]{
+  width: 42px; height: 42px; border-radius: 14px;
+}
+
 .crop__label{
   position: absolute;
   left: 50%;

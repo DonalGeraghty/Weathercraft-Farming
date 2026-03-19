@@ -1238,6 +1238,7 @@ function renderTile(idx) {
     const stage = cropStage(progress);
 
     cropEl.dataset.stage = stage;
+    cropEl.dataset.crop = cropId;
 
     const imgEl = cropImgs[idx];
     if (lastCropIdByIdx[idx] !== cropId || lastCropStageByIdx[idx] !== stage) {
