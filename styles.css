@@ -459,3 +459,27 @@ body{
   color: var(--muted);
   line-height: 1.6;
 }
+
+.musicControls{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.musicControls .btn{
+  min-width: 92px;
+}
+
+.musicVolumeRow{
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.musicVolume{
+  width: 100%;
+}

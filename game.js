@@ -829,6 +829,77 @@ function bindUi() {
       reader.readAsText(file);
     });
   }
+
+  // ---- Background music controls ----
+  const bgm = document.getElementById("bgm");
+  const musicPlayBtn = document.getElementById("musicPlayBtn");
+  const musicPauseBtn = document.getElementById("musicPauseBtn");
+  const musicMuteBtn = document.getElementById("musicMuteBtn");
+  const musicVolumeInput = document.getElementById("musicVolume");
+  const musicVolumeValue = document.getElementById("musicVolumeValue");
+
+  if (bgm && musicPlayBtn && musicPauseBtn && musicMuteBtn && musicVolumeInput && musicVolumeValue) {
+    const clamp01 = (n) => Math.max(0, Math.min(1, n));
+
+    const setUiPlaying = (isPlaying) => {
+      musicPlayBtn.disabled = isPlaying;
+      musicPauseBtn.disabled = !isPlaying;
+    };
+
+    const setUiMuted = () => {
+      musicMuteBtn.textContent = bgm.muted ? "Unmute" : "Mute";
+    };
+
+    const syncVolumeUi = () => {
+      const v = clamp01(bgm.volume);
+      const pct = Math.round(v * 100);
+      if (musicVolumeValue.textContent !== `${pct}%`) musicVolumeValue.textContent = `${pct}%`;
+      if (String(musicVolumeInput.value) !== String(pct)) musicVolumeInput.value = String(pct);
+    };
+
+    // Apply initial slider volume (autoplay is still blocked until user presses Play).
+    const initialPct = Math.max(0, Math.min(100, Number(musicVolumeInput.value) || 0));
+    bgm.volume = clamp01(initialPct / 100);
+    bgm.muted = false;
+    syncVolumeUi();
+    setUiPlaying(false);
+    setUiMuted();
+    musicPauseBtn.disabled = true;
+
+    musicPlayBtn.addEventListener("click", async () => {
+      try {
+        await bgm.play();
+      } catch {
+        // Autoplay / interaction restrictions can prevent play; UI stays in paused state.
+      }
+    });
+
+    musicPauseBtn.addEventListener("click", () => {
+      bgm.pause();
+    });
+
+    musicMuteBtn.addEventListener("click", () => {
+      bgm.muted = !bgm.muted;
+      setUiMuted();
+      // If unmuting, also reflect volume UI.
+      syncVolumeUi();
+    });
+
+    musicVolumeInput.addEventListener("input", () => {
+      const pct = Math.max(0, Math.min(100, Number(musicVolumeInput.value) || 0));
+      bgm.volume = clamp01(pct / 100);
+      if (bgm.volume > 0) bgm.muted = false;
+      setUiMuted();
+      syncVolumeUi();
+    });
+
+    bgm.addEventListener("play", () => setUiPlaying(true));
+    bgm.addEventListener("pause", () => setUiPlaying(false));
+    bgm.addEventListener("volumechange", () => {
+      setUiMuted();
+      syncVolumeUi();
+    });
+  }
 }
 
 function updateWeatherMachineUi() {

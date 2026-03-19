@@ -107,6 +107,20 @@
           </div>
 
           <div class="card">
+            <div class="card__title">Background Music</div>
+            <div class="musicControls">
+              <button id="musicPlayBtn" class="btn btn--primary" type="button">Play</button>
+              <button id="musicPauseBtn" class="btn" type="button">Pause</button>
+              <button id="musicMuteBtn" class="btn" type="button">Mute</button>
+            </div>
+            <div class="musicVolumeRow">
+              <div class="label">Volume</div>
+              <input id="musicVolume" class="musicVolume" type="range" min="0" max="100" step="1" value="50" />
+              <div class="small" id="musicVolumeValue">50%</div>
+            </div>
+          </div>
+
+          <div class="card">
             <div class="card__title">How it works</div>
             <ul class="list">
               <li>Outer ring is a <b>path</b>; the inner 12×12 is <b>field</b>.</li>
@@ -118,6 +132,14 @@
         </aside>
       </main>
     </div>
+
+    <audio
+      id="bgm"
+      src="./Cozy%20Field%20Sunrise.mp3"
+      preload="auto"
+      loop
+      aria-hidden="true"
+    ></audio>
 
     <script src="./game.js"></script>
   </body>
