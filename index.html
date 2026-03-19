@@ -43,6 +43,8 @@
             </div>
             <div class="legend__row"><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span><span class="kbd">5</span> Select seed</div>
             <div class="legend__row"><span class="kbd">B</span> Buy 1 seed</div>
+            <div class="legend__row"><span class="kbd">N</span> Buy 5 seeds</div>
+            <div class="legend__row"><span class="kbd">M</span> Buy 10 seeds</div>
           </div>
         </section>
 
@@ -55,6 +57,8 @@
             </div>
             <div class="seedActions">
               <button id="buySeedBtn" class="btn btn--primary" type="button">Buy 1 seed</button>
+              <button id="buySeed5Btn" class="btn" type="button">Buy 5 seeds</button>
+              <button id="buySeed10Btn" class="btn" type="button">Buy 10 seeds</button>
               <div class="small" id="seedInfo"></div>
             </div>
 
@@ -82,7 +86,7 @@
                   class="fileInput"
                   type="number"
                   min="0"
-                  step="1"
+                  step="10"
                   value="0"
                 />
                 <button id="weatherMachineSpendBtn" class="btn btn--primary" type="button">Pay</button>
@@ -115,8 +119,8 @@
             </div>
             <div class="musicVolumeRow">
               <div class="label">Volume</div>
-              <input id="musicVolume" class="musicVolume" type="range" min="0" max="100" step="1" value="50" />
-              <div class="small" id="musicVolumeValue">50%</div>
+              <input id="musicVolume" class="musicVolume" type="range" min="0" max="100" step="1" value="10" />
+              <div class="small" id="musicVolumeValue">10%</div>
             </div>
           </div>
 

@@ -65,8 +65,10 @@ const WEATHER = {
   rain: { id: "rain", name: "Rain", growthMultiplier: 1.35 },
 };
 
-const WEATHER_BASE_CHANGE_CHANCE = 0.5; // 50% at the start
-const WEATHER_CHANGE_CHANCE_PER_EURO = 0.1; // +10% per € spent
+// Weather change chance starts at 0%.
+// Each € spent adds +1% chance (so 10€ => 10%).
+const WEATHER_BASE_CHANGE_CHANCE = 0;
+const WEATHER_CHANGE_CHANCE_PER_EURO = 0.01; // +1% per € spent
 
 function clamp01(n) {
   return Math.max(0, Math.min(1, n));
@@ -109,10 +111,10 @@ const state = {
   day: 1,
   msIntoDay: 0,
   weatherId: "sun",
-  weatherChangeChance: 0.5,
+  weatherChangeChance: 0,
   weatherMachineSpendCommitted: 0,
   weatherMachineSelection: "sun",
-  money: 1000,
+  money: 100,
   selectedSeedId: "carrot",
   inventory: {
     carrot: 3,
@@ -723,6 +725,11 @@ function bindUi() {
     tryBuySelectedSeed(1);
   });
 
+  const buySeed5Btn = document.getElementById("buySeed5Btn");
+  const buySeed10Btn = document.getElementById("buySeed10Btn");
+  if (buySeed5Btn) buySeed5Btn.addEventListener("click", () => tryBuySelectedSeed(5));
+  if (buySeed10Btn) buySeed10Btn.addEventListener("click", () => tryBuySelectedSeed(10));
+
   document.getElementById("weatherMachineSunBtn").addEventListener("click", () => {
     state.weatherMachineSelection = "sun";
     updateWeatherMachineUi();
@@ -737,19 +744,50 @@ function bindUi() {
     pauseBtn.addEventListener("click", () => setPaused(!state.paused));
   }
 
+  // Allow holding Space/E to plant/harvest continuously while moving.
+  let holdingPlant = false; // Space
+  let holdingHarvest = false; // E
+
+  function maybeHarvestAndPlant() {
+    // Harvest first so a newly-cleared tile can be planted immediately.
+    if (holdingHarvest) tryHarvestHere();
+    if (holdingPlant) tryPlantHere();
+  }
+
+  function doMove(dx, dy) {
+    const prevX = state.farmer.x;
+    const prevY = state.farmer.y;
+    tryMove(dx, dy);
+    if (state.farmer.x !== prevX || state.farmer.y !== prevY) {
+      maybeHarvestAndPlant();
+    }
+  }
+
   const weatherSpendInput = document.getElementById("weatherMachineSpendInput");
   const weatherSpendBtn = document.getElementById("weatherMachineSpendBtn");
+  const WEATHER_SPEND_UNIT_EUR = 10; // each 10€ => 10% chance
+
+  function commitWeatherMachineSpend(amt) {
+    if (!weatherSpendInput || !weatherSpendBtn) return;
+
+    // Force spending to occur in 10€ increments.
+    const raw = Math.max(0, Number(amt) || 0);
+    const amount = Math.floor(raw / WEATHER_SPEND_UNIT_EUR) * WEATHER_SPEND_UNIT_EUR;
+    if (amount <= 0) return;
+    if (state.money < amount) return;
+
+    state.money -= amount;
+    state.weatherMachineSpendCommitted += amount;
+
+    weatherSpendInput.value = "0";
+    updateHud();
+    updateShopInfo();
+    updateWeatherMachineUi();
+  }
+
   if (weatherSpendInput && weatherSpendBtn) {
     weatherSpendBtn.addEventListener("click", () => {
-      const amt = Math.max(0, Math.floor(Number(weatherSpendInput.value) || 0));
-      if (amt <= 0) return;
-      if (state.money < amt) return;
-      state.money -= amt;
-      state.weatherMachineSpendCommitted += amt;
-      weatherSpendInput.value = "0";
-      updateHud();
-      updateShopInfo();
-      updateWeatherMachineUi();
+      commitWeatherMachineSpend(weatherSpendInput.value);
     });
   }
 
@@ -766,12 +804,19 @@ function bindUi() {
       e.preventDefault();
     }
 
-    if (key === "w" || key === "arrowup") tryMove(0, -1);
-    if (key === "a" || key === "arrowleft") tryMove(-1, 0);
-    if (key === "s" || key === "arrowdown") tryMove(0, 1);
-    if (key === "d" || key === "arrowright") tryMove(1, 0);
-    if (key === " ") tryPlantHere();
-    if (key === "e") tryHarvestHere();
+    if (key === "w" || key === "arrowup") doMove(0, -1);
+    if (key === "a" || key === "arrowleft") doMove(-1, 0);
+    if (key === "s" || key === "arrowdown") doMove(0, 1);
+    if (key === "d" || key === "arrowright") doMove(1, 0);
+
+    if (key === " ") {
+      holdingPlant = true;
+      if (!e.repeat) tryPlantHere();
+    }
+    if (key === "e") {
+      holdingHarvest = true;
+      if (!e.repeat) tryHarvestHere();
+    }
 
     // Keyboard-only shop controls:
     // 1-5 selects seed; B buys one seed.
@@ -790,6 +835,23 @@ function bindUi() {
       const count = e.shiftKey ? 5 : 1;
       tryBuySelectedSeed(count);
     }
+
+    // Seed shop quick-purchase hotkeys:
+    // N => buy 5 seeds, M => buy 10 seeds.
+    if (!["p", "w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright", " ", "e"].includes(key)) {
+      const activeTag = (document.activeElement?.tagName ?? "").toLowerCase();
+      const isTyping = ["input", "textarea", "select"].includes(activeTag);
+      if (!isTyping) {
+        if (key === "n") tryBuySelectedSeed(5);
+        if (key === "m") tryBuySelectedSeed(10);
+      }
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    const key = e.key.toLowerCase();
+    if (key === " ") holdingPlant = false;
+    if (key === "e") holdingHarvest = false;
   });
 
   updateShopInfo();
@@ -871,7 +933,7 @@ function bindUi() {
       if (String(musicVolumeInput.value) !== String(pct)) musicVolumeInput.value = String(pct);
     };
 
-    // Apply initial slider volume (autoplay is still blocked until user presses Play).
+    // Apply initial slider volume and attempt autoplay (may still be blocked by browser policy).
     const initialPct = Math.max(0, Math.min(100, Number(musicVolumeInput.value) || 0));
     bgm.volume = clamp01(initialPct / 100);
     bgm.muted = false;
@@ -879,6 +941,11 @@ function bindUi() {
     setUiPlaying(false);
     setUiMuted();
     musicPauseBtn.disabled = true;
+
+    // Try to start music immediately on load.
+    bgm.play().catch(() => {
+      // Autoplay may be blocked until user gesture; UI stays in paused state.
+    });
 
     musicPlayBtn.addEventListener("click", async () => {
       try {
