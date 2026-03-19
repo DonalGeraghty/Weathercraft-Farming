@@ -124,6 +124,18 @@ const state = {
   paused: false,
 };
 
+// ---- DOM caching for fast rendering ----
+const TILE_COUNT = WORLD_SIZE * WORLD_SIZE;
+let tileEls = [];
+let cropEls = [];
+let cropLabels = [];
+let cropBarFills = [];
+let harvestReadyEls = [];
+let farmerEl = null;
+let lastFarmerIdx = null;
+let lastHighlightedIdx = null;
+let lastCropIdByIdx = new Array(TILE_COUNT).fill(null);
+
 const SEED_KEY_ORDER = ["carrot", "onion", "cabbage", "watercress", "cactusFruit"];
 
 function createInitialTiles() {
@@ -314,6 +326,7 @@ function importStateFromCsv(csvText) {
   updateHud();
   updateShopInfo();
   renderAll();
+  updateHighlights();
 }
 
 function weatherForDay(day) {
@@ -372,6 +385,7 @@ function init() {
   updateHud();
   setWeatherTheme();
   renderAll();
+  updateHighlights();
   startLoop();
 }
 
@@ -387,18 +401,31 @@ function fieldCount() {
 }
 
 function isAdjacentToWaterlogged(x, y) {
-  const neighbors = [
-    { x: x + 1, y },
-    { x: x - 1, y },
-    { x, y: y + 1 },
-    { x, y: y - 1 },
-  ];
-  for (const n of neighbors) {
-    if (n.x < 0 || n.y < 0 || n.x >= WORLD_SIZE || n.y >= WORLD_SIZE) continue;
-    if (!isField(n.x, n.y)) continue;
-    const tile = state.tiles[tileIndex(n.x, n.y)];
+  // Avoid allocations in a hot path: check 4 neighbors directly.
+  let nx = x + 1;
+  if (nx >= 0 && nx < WORLD_SIZE) {
+    const tile = state.tiles[tileIndex(nx, y)];
     if (tile?.kind === "field" && tile.waterlogged) return true;
   }
+
+  nx = x - 1;
+  if (nx >= 0 && nx < WORLD_SIZE) {
+    const tile = state.tiles[tileIndex(nx, y)];
+    if (tile?.kind === "field" && tile.waterlogged) return true;
+  }
+
+  let ny = y + 1;
+  if (ny >= 0 && ny < WORLD_SIZE) {
+    const tile = state.tiles[tileIndex(x, ny)];
+    if (tile?.kind === "field" && tile.waterlogged) return true;
+  }
+
+  ny = y - 1;
+  if (ny >= 0 && ny < WORLD_SIZE) {
+    const tile = state.tiles[tileIndex(x, ny)];
+    if (tile?.kind === "field" && tile.waterlogged) return true;
+  }
+
   return false;
 }
 
@@ -585,6 +612,15 @@ function buildGridDom() {
   const gridEl = document.getElementById("grid");
   gridEl.innerHTML = "";
 
+  tileEls = new Array(TILE_COUNT);
+  cropEls = new Array(TILE_COUNT);
+  cropLabels = new Array(TILE_COUNT);
+  cropBarFills = new Array(TILE_COUNT);
+  harvestReadyEls = new Array(TILE_COUNT);
+  lastFarmerIdx = null;
+  lastHighlightedIdx = null;
+  lastCropIdByIdx = new Array(TILE_COUNT).fill(null);
+
   for (let y = 0; y < WORLD_SIZE; y++) {
     for (let x = 0; x < WORLD_SIZE; x++) {
       const idx = tileIndex(x, y);
@@ -593,13 +629,50 @@ function buildGridDom() {
       const el = document.createElement("div");
       el.className = `tile ${tile.kind === "field" ? "tile--field" : "tile--path"}`;
       if (tile.kind === "field" && (x + y) % 2 === 0) el.classList.add("alt");
-      el.dataset.x = String(x);
-      el.dataset.y = String(y);
-      el.dataset.idx = String(idx);
       el.setAttribute("role", "gridcell");
       gridEl.appendChild(el);
+
+      tileEls[idx] = el;
+
+      // Pre-create crop UI (hidden unless the tile has a valid crop to show).
+      const cropEl = document.createElement("div");
+      cropEl.className = "crop";
+      cropEl.style.display = "none";
+
+      const labelEl = document.createElement("div");
+      labelEl.className = "crop__label";
+      labelEl.textContent = "";
+      cropEl.appendChild(labelEl);
+
+      const bar = document.createElement("div");
+      bar.className = "crop__bar";
+      const fill = document.createElement("div");
+      fill.className = "crop__barFill";
+      fill.style.width = "0%";
+      bar.appendChild(fill);
+      cropEl.appendChild(bar);
+
+      el.appendChild(cropEl);
+
+      // Pre-create harvest-ready indicator (hidden unless progress >= 1).
+      const harvestEl = document.createElement("div");
+      harvestEl.className = "harvestReady";
+      harvestEl.textContent = "!";
+      harvestEl.title = "Ready to harvest (press E)";
+      harvestEl.style.display = "none";
+      el.appendChild(harvestEl);
+
+      cropEls[idx] = cropEl;
+      cropLabels[idx] = labelEl;
+      cropBarFills[idx] = fill;
+      harvestReadyEls[idx] = harvestEl;
     }
   }
+
+  // Create a single farmer element; we move it between tiles on demand.
+  farmerEl = document.createElement("div");
+  farmerEl.className = "farmer";
+  farmerEl.textContent = "🧑‍🌾";
 }
 
 function bindUi() {
@@ -661,6 +734,7 @@ function bindUi() {
       state.weatherMachineSpendCommitted += amt;
       weatherSpendInput.value = "0";
       updateHud();
+      updateShopInfo();
       updateWeatherMachineUi();
     });
   }
@@ -811,16 +885,37 @@ function updateHud() {
   const chanceEl = document.getElementById("weatherChanceValue");
   if (chanceEl) chanceEl.textContent = `${Math.round(getEffectiveWeatherChangeChance() * 100)}%`;
   document.getElementById("moneyValue").textContent = String(state.money);
-  updateShopInfo();
 }
 
 function startLoop() {
   let last = performance.now();
+
+  // Fixed-rate simulation + throttled rendering to reduce CPU.
+  // The game state changes slowly (day ~= 5 real minutes), so 15-20 FPS is enough.
+  const TICK_INTERVAL_MS = 50; // ~20 ticks/sec
+  const RENDER_INTERVAL_MS = 50; // ~20 renders/sec
+  let simAccumulator = 0;
+  let lastRender = 0;
+
   function frame(now) {
     const dt = now - last;
     last = now;
-    if (!state.paused) tick(dt);
-    else renderAll();
+
+    if (!state.paused) {
+      simAccumulator += dt;
+      // Cap simulation work: if the tab was backgrounded, catch up in fixed steps.
+      while (simAccumulator >= TICK_INTERVAL_MS) {
+        tick(TICK_INTERVAL_MS);
+        simAccumulator -= TICK_INTERVAL_MS;
+      }
+
+      if (now - lastRender >= RENDER_INTERVAL_MS) {
+        lastRender = now;
+        updateHud();
+        renderAll();
+      }
+    }
+
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -833,6 +928,7 @@ function tick(dtMs) {
     state.day += 1;
     const prevWeather = state.weatherId;
     applyWeatherMachineAtMidnight();
+    updateWeatherMachineUi();
 
     const nextWeather = state.weatherId;
     const isSwap = prevWeather !== nextWeather;
@@ -872,9 +968,6 @@ function tick(dtMs) {
     growAllCrops(dtMs / MS_PER_DAY);
     updateRotAndBlack(dtMs);
   }
-
-  updateHud();
-  renderAll();
 }
 
 function growAllCrops(dayFraction) {
@@ -963,6 +1056,7 @@ function tryMove(dx, dy) {
   state.farmer.x = nx;
   state.farmer.y = ny;
   updateHighlights();
+  syncFarmerDom();
 }
 
 function tryPlantHere() {
@@ -1001,8 +1095,10 @@ function tryPlantHere() {
   tile.crop = { cropId, progress: 0 };
   state.inventory[cropId] = have - 1;
 
-  updateHud();
+  updateShopInfo();
   updateHighlights();
+  const idx = tileIndex(state.farmer.x, state.farmer.y);
+  renderTile(idx);
 }
 
 function tryHarvestHere() {
@@ -1020,84 +1116,81 @@ function tryHarvestHere() {
   updateHud();
   updateShopInfo();
   updateHighlights();
+  const idx = tileIndex(state.farmer.x, state.farmer.y);
+  renderTile(idx);
+}
+
+function syncFarmerDom() {
+  if (!farmerEl) return;
+  const idx = tileIndex(state.farmer.x, state.farmer.y);
+  if (idx === lastFarmerIdx) return;
+  const el = tileEls[idx];
+  if (!el) return;
+  el.appendChild(farmerEl);
+  lastFarmerIdx = idx;
+}
+
+function renderTile(idx) {
+  const tile = state.tiles[idx];
+  const el = tileEls[idx];
+  if (!tile || !el) return;
+
+  const isBlack = tile.kind === "field" && tile.blackMsRemaining > 0;
+  el.classList.toggle("tile--waterlogged", tile.kind === "field" && tile.waterlogged && !isBlack);
+  el.classList.toggle("tile--scorched", tile.kind === "field" && tile.scorched && !isBlack);
+  el.classList.toggle("tile--black", isBlack);
+
+  const cropEl = cropEls[idx];
+  const labelEl = cropLabels[idx];
+  const fillEl = cropBarFills[idx];
+  const harvestEl = harvestReadyEls[idx];
+  if (!cropEl || !labelEl || !fillEl || !harvestEl) return;
+
+  if (tile.kind === "field" && tile.crop && !isBlack) {
+    const cropId = tile.crop.cropId;
+    const cropDef = CROPS[cropId];
+    const progress = tile.crop.progress;
+    const stage = cropStage(progress);
+
+    cropEl.dataset.stage = stage;
+
+    if (lastCropIdByIdx[idx] !== cropId) {
+      labelEl.textContent = cropDef?.label ?? "?";
+      cropEl.style.background = `linear-gradient(180deg, rgba(255,255,255,0.16), rgba(0,0,0,0.16)), ${cropDef?.color ?? "rgba(255,255,255,0.12)"}`;
+      lastCropIdByIdx[idx] = cropId;
+    }
+
+    fillEl.style.width = `${Math.floor(clamp01(progress) * 100)}%`;
+    cropEl.style.display = "";
+
+    harvestEl.style.display = progress >= 1 ? "" : "none";
+  } else {
+    cropEl.style.display = "none";
+    harvestEl.style.display = "none";
+  }
 }
 
 function renderAll() {
-  const gridEl = document.getElementById("grid");
-  const children = gridEl.children;
-  for (let i = 0; i < children.length; i++) {
-    const el = children[i];
-    const x = Number(el.dataset.x);
-    const y = Number(el.dataset.y);
-    const tile = state.tiles[i];
-
-    // Update dynamic styling.
-    const isBlack = tile.kind === "field" && tile.blackMsRemaining > 0;
-    el.classList.toggle("tile--waterlogged", tile.kind === "field" && tile.waterlogged && !isBlack);
-    el.classList.toggle("tile--scorched", tile.kind === "field" && tile.scorched && !isBlack);
-    el.classList.toggle("tile--black", isBlack);
-
-    el.innerHTML = "";
-    if (tile.kind === "field" && tile.crop && !isBlack) {
-      const cropDef = CROPS[tile.crop.cropId];
-      const progress = tile.crop.progress;
-      const stage = cropStage(progress);
-      const isHarvestReady = progress >= 1;
-
-      const cropEl = document.createElement("div");
-      cropEl.className = "crop";
-      cropEl.dataset.stage = stage;
-      cropEl.style.background = `linear-gradient(180deg, rgba(255,255,255,0.16), rgba(0,0,0,0.16)), ${cropDef?.color ?? "rgba(255,255,255,0.12)"}`;
-
-      const labelEl = document.createElement("div");
-      labelEl.className = "crop__label";
-      labelEl.textContent = cropDef?.label ?? "?";
-      cropEl.appendChild(labelEl);
-
-      const bar = document.createElement("div");
-      bar.className = "crop__bar";
-      const fill = document.createElement("div");
-      fill.className = "crop__barFill";
-      fill.style.width = `${Math.floor(clamp01(progress) * 100)}%`;
-      bar.appendChild(fill);
-      cropEl.appendChild(bar);
-
-      el.appendChild(cropEl);
-
-      if (isHarvestReady) {
-        const ready = document.createElement("div");
-        ready.className = "harvestReady";
-        ready.textContent = "!";
-        ready.title = "Ready to harvest (press E)";
-        el.appendChild(ready);
-      }
-    }
-
-    if (state.farmer.x === x && state.farmer.y === y) {
-      const f = document.createElement("div");
-      f.className = "farmer";
-      f.textContent = "🧑‍🌾";
-      el.appendChild(f);
-    }
+  for (let i = 0; i < state.tiles.length; i++) {
+    renderTile(i);
   }
-
-  updateHighlights();
+  syncFarmerDom();
 }
 
 function updateHighlights() {
-  const gridEl = document.getElementById("grid");
-  const children = gridEl.children;
-  for (let i = 0; i < children.length; i++) {
-    children[i].classList.remove("tile--highlight");
+  const idx = tileIndex(state.farmer.x, state.farmer.y);
+  const tile = state.tiles[idx];
+
+  if (!tile || tile.kind !== "field") {
+    if (lastHighlightedIdx != null) tileEls[lastHighlightedIdx]?.classList.remove("tile--highlight");
+    lastHighlightedIdx = null;
+    return;
   }
 
-  const idx = tileIndex(state.farmer.x, state.farmer.y);
-  const el = children[idx];
-  if (!el) return;
-  const tile = state.tiles[idx];
-  if (!tile) return;
-  if (tile.kind !== "field") return;
-  el.classList.add("tile--highlight");
+  if (lastHighlightedIdx === idx) return;
+  if (lastHighlightedIdx != null) tileEls[lastHighlightedIdx]?.classList.remove("tile--highlight");
+  tileEls[idx]?.classList.add("tile--highlight");
+  lastHighlightedIdx = idx;
 }
 
 init();
