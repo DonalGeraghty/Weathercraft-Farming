@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- leaves -->
+  <rect x="6" y="0" width="4" height="2" fill="#5de06a" />
+  <rect x="5" y="1" width="6" height="1" fill="#2f8f3a" />
+  <rect x="4" y="2" width="3" height="1" fill="#5de06a" />
+  <rect x="9" y="2" width="3" height="1" fill="#5de06a" />
+
+  <!-- carrot body -->
+  <rect x="6" y="3" width="4" height="10" fill="#ff8a3d" />
+  <rect x="6" y="3" width="1" height="10" fill="#6b3f1a" opacity="0.9" />
+  <rect x="9" y="3" width="1" height="10" fill="#6b3f1a" opacity="0.9" />
+
+  <!-- highlight -->
+  <rect x="7" y="5" width="1" height="6" fill="#ffd2aa" opacity="0.95" />
+
+  <!-- tip -->
+  <rect x="6" y="13" width="4" height="1" fill="#6b3f1a" opacity="0.85" />
+</svg>

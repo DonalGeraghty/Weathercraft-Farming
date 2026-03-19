@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- base -->
+  <rect x="6" y="12" width="4" height="1" fill="#1b1325" opacity="0.75" />
+
+  <!-- cabbage body -->
+  <rect x="4" y="6" width="8" height="7" fill="#7dff86" />
+  <rect x="5" y="7" width="6" height="5" fill="#5fe66b" opacity="0.95" />
+
+  <!-- leaf holes / shading -->
+  <rect x="6" y="8" width="2" height="2" fill="#2f8f3a" opacity="0.35" />
+  <rect x="9" y="9" width="1" height="1" fill="#2f8f3a" opacity="0.4" />
+  <rect x="6" y="10" width="3" height="1" fill="#2f8f3a" opacity="0.25" />
+</svg>

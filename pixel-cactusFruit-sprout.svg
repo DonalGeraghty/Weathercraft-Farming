@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- cactus pads -->
+  <rect x="6" y="7" width="4" height="7" fill="#2f8f3a" />
+  <rect x="7" y="8" width="2" height="5" fill="#1f6f2a" opacity="0.55" />
+
+  <!-- fruit -->
+  <rect x="7" y="5" width="2" height="2" fill="#f7a93c" />
+  <rect x="6" y="6" width="1" height="1" fill="#ffd28a" opacity="0.8" />
+  <rect x="9" y="6" width="1" height="1" fill="#ffd28a" opacity="0.8" />
+</svg>

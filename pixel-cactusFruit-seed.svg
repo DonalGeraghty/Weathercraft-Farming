@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- tiny cactus bud -->
+  <rect x="7" y="9" width="2" height="3" fill="#2f8f3a" />
+  <rect x="6" y="10" width="1" height="2" fill="#1f6f2a" opacity="0.9" />
+  <rect x="9" y="10" width="1" height="2" fill="#1f6f2a" opacity="0.9" />
+
+  <!-- hint of fruit -->
+  <rect x="8" y="8" width="1" height="1" fill="#f7a93c" />
+</svg>

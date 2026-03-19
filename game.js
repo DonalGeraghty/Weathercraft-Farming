@@ -129,12 +129,14 @@ const TILE_COUNT = WORLD_SIZE * WORLD_SIZE;
 let tileEls = [];
 let cropEls = [];
 let cropLabels = [];
+let cropImgs = [];
 let cropBarFills = [];
 let harvestReadyEls = [];
 let farmerEl = null;
 let lastFarmerIdx = null;
 let lastHighlightedIdx = null;
 let lastCropIdByIdx = new Array(TILE_COUNT).fill(null);
+let lastCropStageByIdx = new Array(TILE_COUNT).fill(null);
 
 const SEED_KEY_ORDER = ["carrot", "onion", "cabbage", "watercress", "cactusFruit"];
 
@@ -615,11 +617,13 @@ function buildGridDom() {
   tileEls = new Array(TILE_COUNT);
   cropEls = new Array(TILE_COUNT);
   cropLabels = new Array(TILE_COUNT);
+  cropImgs = new Array(TILE_COUNT);
   cropBarFills = new Array(TILE_COUNT);
   harvestReadyEls = new Array(TILE_COUNT);
   lastFarmerIdx = null;
   lastHighlightedIdx = null;
   lastCropIdByIdx = new Array(TILE_COUNT).fill(null);
+  lastCropStageByIdx = new Array(TILE_COUNT).fill(null);
 
   for (let y = 0; y < WORLD_SIZE; y++) {
     for (let x = 0; x < WORLD_SIZE; x++) {
@@ -638,6 +642,11 @@ function buildGridDom() {
       const cropEl = document.createElement("div");
       cropEl.className = "crop";
       cropEl.style.display = "none";
+
+      const imgEl = document.createElement("img");
+      imgEl.className = "crop__img";
+      imgEl.alt = "Crop";
+      cropEl.appendChild(imgEl);
 
       const labelEl = document.createElement("div");
       labelEl.className = "crop__label";
@@ -664,6 +673,7 @@ function buildGridDom() {
 
       cropEls[idx] = cropEl;
       cropLabels[idx] = labelEl;
+      cropImgs[idx] = imgEl;
       cropBarFills[idx] = fill;
       harvestReadyEls[idx] = harvestEl;
     }
@@ -672,7 +682,11 @@ function buildGridDom() {
   // Create a single farmer element; we move it between tiles on demand.
   farmerEl = document.createElement("div");
   farmerEl.className = "farmer";
-  farmerEl.textContent = "🧑‍🌾";
+  const farmerImg = document.createElement("img");
+  farmerImg.className = "farmer__img";
+  farmerImg.alt = "Pixel farmer";
+  farmerImg.src = "./pixel-farmer.svg";
+  farmerEl.appendChild(farmerImg);
 }
 
 function bindUi() {
@@ -1225,10 +1239,16 @@ function renderTile(idx) {
 
     cropEl.dataset.stage = stage;
 
-    if (lastCropIdByIdx[idx] !== cropId) {
-      labelEl.textContent = cropDef?.label ?? "?";
-      cropEl.style.background = `linear-gradient(180deg, rgba(255,255,255,0.16), rgba(0,0,0,0.16)), ${cropDef?.color ?? "rgba(255,255,255,0.12)"}`;
+    const imgEl = cropImgs[idx];
+    if (lastCropIdByIdx[idx] !== cropId || lastCropStageByIdx[idx] !== stage) {
+      labelEl.textContent = cropDef?.label ?? "?"; // kept for accessibility/fallback
+      cropEl.style.background = "transparent";
+      if (imgEl) {
+        imgEl.src = `./pixel-${cropId}-${stage}.svg`;
+        imgEl.alt = `${cropDef?.name ?? cropId} (${stage})`;
+      }
       lastCropIdByIdx[idx] = cropId;
+      lastCropStageByIdx[idx] = stage;
     }
 
     fillEl.style.width = `${Math.floor(clamp01(progress) * 100)}%`;
