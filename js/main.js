@@ -47,6 +47,16 @@ function startLoop() {
 function tick(dtMs) {
   state.msIntoDay += dtMs;
 
+  // Handle Sunrise Transition Countdown
+  if (state.sunriseTransitionMsRemaining > 0) {
+    state.sunriseTransitionMsRemaining -= dtMs;
+    if (state.sunriseTransitionMsRemaining <= 0) {
+      state.sunriseTransitionMsRemaining = 0;
+      state.sunriseTransition = false;
+      updateShopInfo(); // Re-enable shop buttons and update UI feedback
+    }
+  }
+
   const bgm = document.getElementById("bgm");
   if (bgm) {
     const wantNightSrc = isNighttime();
@@ -60,7 +70,7 @@ function tick(dtMs) {
         state.bgmFadeState = "fadeOut";
         state.bgmFadeTimerMs = 0;
       } else {
-        // Sunrise: Immediate snap
+        // Sunrise: Immediate snap (INTENDED: No crossfade during sunrise transition).
         bgm.src = "./assets/audio/Music%20-%20Day%2001.mp3";
         if (!bgm.paused) bgm.play().catch(() => {});
       }
@@ -94,6 +104,9 @@ function tick(dtMs) {
   const roosterThreshold = (7 / 24) * MS_PER_DAY;
   if (!state.roosterPlayedToday && state.msIntoDay >= roosterThreshold) {
     state.roosterPlayedToday = true;
+    state.sunriseTransition = true;
+    state.sunriseTransitionMsRemaining = 2000;
+
     const rooster = document.getElementById("roosterSfx");
     if (rooster && bgm) {
       rooster.volume = clamp01(bgm.volume * 0.8);
@@ -101,11 +114,8 @@ function tick(dtMs) {
     }
 
     const prevWeather = state.weatherId;
+    maybeChangeWeatherAtSunrise();
     applyWeatherMachineAtSunrise();
-    // Only apply the natural weather flip if the machine didn't already change it.
-    if (state.weatherId === prevWeather) {
-      maybeChangeWeatherAtSunrise();
-    }
     updateWeatherMachineUi();
 
     const nextWeather = state.weatherId;
@@ -119,6 +129,9 @@ function tick(dtMs) {
 
     enforceHazardPlantValidity();
     setWeatherTheme();
+    updateShopInfo();
+    updateHighlights();
+    renderAll();
   }
 
   if (state.msIntoDay >= MS_PER_DAY) {

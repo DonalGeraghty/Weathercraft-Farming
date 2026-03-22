@@ -125,8 +125,17 @@ function isAdjacentToWaterlogged(x, y) {
 function reconcileExclusiveHazards(tile) {
   if (!tile || tile.kind !== "field") return;
   // A tile may only ever be one hazard type; waterlogged takes priority.
-  if (tile.waterlogged) tile.scorched = false;
-  else if (tile.scorched) tile.waterlogged = false;
+  if (tile.waterlogged) {
+    if (tile.scorched) {
+      tile.scorched = false;
+      tile.dirty = true;
+    }
+  } else if (tile.scorched) {
+    if (tile.waterlogged) {
+      tile.waterlogged = false;
+      tile.dirty = true;
+    }
+  }
 }
 
 function enforceHazardPlantValidity() {
@@ -135,8 +144,11 @@ function enforceHazardPlantValidity() {
     if (tile.kind !== "field" || !tile.crop) continue;
 
     if (tile.blackMsRemaining > 0) {
-      tile.crop = null;
-      tile.readyRotMsRemaining = 0;
+      if (tile.crop) {
+        tile.crop = null;
+        tile.readyRotMsRemaining = 0;
+        tile.dirty = true;
+      }
       continue;
     }
 
@@ -145,18 +157,20 @@ function enforceHazardPlantValidity() {
     const cropId = tile.crop.cropId;
 
     // Regular crops should never exist on hazards (they would have been destroyed when hazards were created).
-    if (cropId !== "cactusFruit" && cropId !== "watercress") {
+    if (cropId !== "cactusfruit" && cropId !== "watercress") {
       if (tile.waterlogged || tile.scorched) {
         tile.crop = null;
         tile.readyRotMsRemaining = 0;
+        tile.dirty = true;
       }
       continue;
     }
 
-    if (cropId === "cactusFruit") {
+    if (cropId === "cactusfruit") {
       if (!tile.scorched) {
         tile.crop = null;
         tile.readyRotMsRemaining = 0;
+        tile.dirty = true;
       }
       continue;
     }
@@ -168,11 +182,13 @@ function enforceHazardPlantValidity() {
     if (tile.waterlogged || tile.scorched) {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
+      tile.dirty = true;
       continue;
     }
     if (!isAdjacentToWaterlogged(x, y)) {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
+      tile.dirty = true;
     }
   }
 }
@@ -192,7 +208,6 @@ function addHazardCells(type, addCount) {
     const tile = state.tiles[i];
     if (tile.kind !== "field") continue;
     if (tile[type]) continue;       // already this hazard
-    if (tile[opposite]) continue;   // never overwrite an existing hazard tile
     candidates.push(i);
   }
 
@@ -205,6 +220,7 @@ function addHazardCells(type, addCount) {
     tile.crop = null;              // destroys any vegetables
     tile.readyRotMsRemaining = 0;  // prevents rotting after being destroyed
     tile.blackMsRemaining = 0;     // hazards overwrite rot
+    tile.dirty = true;
 
     // Revert the opposite hazard within 2 tiles of the new cell.
     const centerX = idx % WORLD_SIZE;
@@ -214,7 +230,11 @@ function addHazardCells(type, addCount) {
         const neighborX = centerX + dx;
         const neighborY = centerY + dy;
         if (!isField(neighborX, neighborY)) continue;
-        state.tiles[tileIndex(neighborX, neighborY)][opposite] = false;
+        const nT = state.tiles[tileIndex(neighborX, neighborY)];
+        if (nT[opposite]) {
+          nT[opposite] = false;
+          nT.dirty = true;
+        }
       }
     }
   }
@@ -260,6 +280,7 @@ function growAllCrops(dtMs) {
 
     const dProgress = growthPerDay * globalMultiplier * cropWeatherMult * envMult * growthThisTick;
     tile.crop.progress = clamp01(tile.crop.progress + dProgress);
+    tile.dirty = true; // Always mark dirty during growth as progress percent usually changes each frame.
   }
 }
 
@@ -271,11 +292,13 @@ function updateRotAndBlack(dtMs) {
     if (tile.blackMsRemaining > 0) {
       tile.blackMsRemaining -= dtMs;
       if (tile.blackMsRemaining < 0) tile.blackMsRemaining = 0;
+      tile.dirty = true;
 
       // If a tile is black, it should never contain a crop.
       if (tile.crop) {
         tile.crop = null;
         tile.readyRotMsRemaining = 0;
+        // already set dirty above
       }
       continue;
     }
@@ -304,6 +327,7 @@ function updateRotAndBlack(dtMs) {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
       tile.blackMsRemaining = MS_PER_DAY;
+      tile.dirty = true;
     }
   }
 }

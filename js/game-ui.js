@@ -127,6 +127,7 @@ function bindUi() {
   });
 
   function tryBuySelectedSeed(count = 1) {
+    if (state.sunriseTransition) return;
     if (state.farmer.x !== 13 || state.farmer.y !== 0) return;
     const crop = CROPS[state.selectedSeedId];
     if (!crop) return;
@@ -382,6 +383,13 @@ function bindUi() {
       syncWeatherAmbience();
     });
   }
+
+  // Update the hint to reflect the actual minutes per day based on constants.
+  const minutesPerDay = (MS_PER_DAY / 60000).toFixed(1);
+  const hintEl = document.getElementById("dayLengthMinutes");
+  if (hintEl) {
+    hintEl.textContent = minutesPerDay;
+  }
 }
 
 function updateWeatherMachineUi() {
@@ -421,20 +429,48 @@ function updateShopInfo() {
     : "";
   seedInfo.textContent = infoText;
 
-  const inventoryParts = [];
-  for (const cropDef of Object.values(CROPS)) {
-    inventoryParts.push(`${cropDef.name}: ${state.inventory[cropDef.id] ?? 0}`);
+  const inventoryGrid = document.getElementById("inventoryGrid");
+  if (inventoryGrid) {
+    inventoryGrid.innerHTML = "";
+    for (const cropId of SEED_KEY_ORDER) {
+      const cropDef = CROPS[cropId];
+      const itemEl = document.createElement("div");
+      itemEl.className = "inventoryItem";
+      if (cropId === state.selectedSeedId) {
+        itemEl.classList.add("inventoryItem--selected");
+      }
+      
+      itemEl.addEventListener("click", () => {
+        state.selectedSeedId = cropId;
+        const seedSelect = document.getElementById("seedSelect");
+        if (seedSelect) seedSelect.value = cropId;
+        updateShopInfo();
+        updateHighlights();
+      });
+
+      const imgEl = document.createElement("img");
+      imgEl.className = "inventoryItem__img";
+      imgEl.src = `./assets/sprites/pixel-${cropDef.id}-grown.svg`;
+      imgEl.alt = cropDef.name;
+      itemEl.appendChild(imgEl);
+
+      const countEl = document.createElement("div");
+      countEl.className = "inventoryItem__count";
+      countEl.textContent = state.inventory[cropDef.id] ?? 0;
+      itemEl.appendChild(countEl);
+
+      inventoryGrid.appendChild(itemEl);
+    }
   }
-  document.getElementById("inventoryValue").textContent = inventoryParts.join(" · ");
 
   const btn = document.getElementById("buySeedBtn");
   const btn5 = document.getElementById("buySeed5Btn");
   const btn10 = document.getElementById("buySeed10Btn");
   const isAtShop = state.farmer.x === 13 && state.farmer.y === 0;
 
-  if (btn) btn.disabled = !crop || !isAtShop || state.money < crop.seedCost * 1;
-  if (btn5) btn5.disabled = !crop || !isAtShop || state.money < crop.seedCost * 5;
-  if (btn10) btn10.disabled = !crop || !isAtShop || state.money < crop.seedCost * 10;
+  if (btn) btn.disabled = state.sunriseTransition || !crop || !isAtShop || state.money < crop.seedCost * 1;
+  if (btn5) btn5.disabled = state.sunriseTransition || !crop || !isAtShop || state.money < crop.seedCost * 5;
+  if (btn10) btn10.disabled = state.sunriseTransition || !crop || !isAtShop || state.money < crop.seedCost * 10;
 
   if (!isAtShop && seedInfo) {
     seedInfo.innerHTML = `<span style="color:var(--danger);font-weight:bold;">Stand on Shop tile (top-right) to buy</span><br/>${infoText}`;
@@ -493,7 +529,7 @@ function tryPlantHere() {
   // Waterlogged tiles are never plantable.
   if (tile.waterlogged) return;
 
-  if (cropId === "cactusFruit") {
+  if (cropId === "cactusfruit") {
     // Cactus fruit can ONLY be placed on scorched earth.
     if (!tile.scorched) return;
   } else if (cropId === "watercress") {
@@ -508,6 +544,7 @@ function tryPlantHere() {
 
   tile.crop = { cropId, progress: 0 };
   state.inventory[cropId] = have - 1;
+  tile.dirty = true;
 
   updateShopInfo();
   updateHighlights();
@@ -527,6 +564,7 @@ function tryHarvestHere() {
   tile.crop = null;
   tile.readyRotMsRemaining = 0;
   tile.blackMsRemaining = 0;
+  tile.dirty = true;
   updateHud();
   updateShopInfo();
   updateHighlights();
@@ -544,8 +582,12 @@ function syncFarmerDom() {
   lastFarmerIdx = idx;
 }
 
-function renderTile(idx) {
+function renderTile(idx, force = false) {
   const tile = state.tiles[idx];
+  if (!tile) return;
+  if (!force && !tile.dirty) return;
+  tile.dirty = false;
+
   const el = tileEls[idx];
   if (!tile || !el) return;
 
@@ -571,7 +613,7 @@ function renderTile(idx) {
 
     const imgEl = cropImgs[idx];
     if (lastCropIdByIdx[idx] !== cropId || lastCropStageByIdx[idx] !== stage) {
-      labelEl.textContent = cropDef?.label ?? "?"; // kept for accessibility/fallback
+      labelEl.textContent = cropDef?.name ?? "?"; // kept for accessibility/fallback
       cropEl.style.background = "transparent";
       if (imgEl) {
         imgEl.src = `./assets/sprites/pixel-${cropId}-${stage}.svg`;
@@ -591,9 +633,9 @@ function renderTile(idx) {
   }
 }
 
-function renderAll() {
+function renderAll(force = false) {
   for (let i = 0; i < state.tiles.length; i++) {
-    renderTile(i);
+    renderTile(i, force);
   }
   syncFarmerDom();
 }
