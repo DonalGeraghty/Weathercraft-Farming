@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Debug Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; color: #fff; background: #222; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        .status { margin-top: 20px; font-family: monospace; }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+    </style>
+</head>
+<body>
+    <h1>Audio Debugger</h1>
+    <p>Test if audio files are loadable and playable directly.</p>
+    
+    <div>
+        <button onclick="testAudio('sunnySfx')">Play Sunny SFX</button>
+        <button onclick="testAudio('rainSfx')">Play Rain SFX</button>
+        <button onclick="testAudio('bgm')">Play BGM</button>
+        <button onclick="testAudio('roosterSfx')">Play Rooster SFX</button>
+    </div>
+
+    <div id="statusLog" class="status"></div>
+
+    <audio id="bgm" src="./Cozy%20Field%20Sunrise.mp3"></audio>
+    <audio id="rainSfx" src="./Music%20Effects%20-%20Rain.mp3"></audio>
+    <audio id="sunnySfx" src="./Music%20Effects%20-%20Sunny.mp3"></audio>
+    <audio id="roosterSfx" src="./Music%20Effects%20-%20Cockadoodledoo.mp3"></audio>
+
+    <script>
+        function log(msg, type='') {
+            const statusLog = document.getElementById('statusLog');
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            statusLog.prepend(div);
+        }
+
+        function testAudio(id) {
+            const audio = document.getElementById(id);
+            log(`Testing ${id} (src: ${audio.src})...`);
+            
+            audio.play()
+                .then(() => {
+                    log(`SUCCESS: ${id} is playing.`, 'success');
+                })
+                .catch(err => {
+                    log(`ERROR: ${id} failed to play. Message: ${err.message}`, 'error');
+                });
+        }
+    </script>
+</body>
+</html>

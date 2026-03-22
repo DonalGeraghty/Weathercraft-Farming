@@ -1,7 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Pixelify+Sans:wght@400;500;600;700&display=swap');
+
 :root{
   --bg: #0b1020;
   --panel: rgba(255,255,255,0.06);
-  --panel2: rgba(255,255,255,0.09);
   --text: rgba(255,255,255,0.92);
   --muted: rgba(255,255,255,0.72);
   --gridLine: rgba(255,255,255,0.08);
@@ -11,30 +12,35 @@
   --focus: #8bd3ff;
   --accent: #62d36f;
   --danger: #ff6b6b;
-  --tile: 44px;
+
+  /* Weather Colors */
+  --sun: #ffdc50;
+  --rain: #8bd3ff;
+
+  /* Fonts */
+  --font-base: "Zilla Slab", "Courier New", Courier, monospace;
 }
+
+.text--sun { color: var(--sun); }
+.text--rain { color: var(--rain); }
+.text--night { color: #b8ccff; }
 
 *{ box-sizing: border-box; }
 html, body { height: 100%; }
 body{
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: var(--font-base);
+  font-weight: 600;
   background:
     radial-gradient(1200px 800px at 20% 0%, rgba(98,211,111,0.18), transparent 55%),
     radial-gradient(1000px 700px at 80% 20%, rgba(139,211,255,0.18), transparent 60%),
     linear-gradient(180deg, rgba(11,16,32,0.72), rgba(11,16,32,0.72)),
-    url("./wallpaper.png");
+    url("../assets/sprites/wallpaper.png");
   background-size: auto, auto, auto, cover;
   background-position: center, center, center, center;
   background-repeat: no-repeat;
   background-color: var(--bg); /* fallback */
   color: var(--text);
-}
-
-.app{
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 18px 18px 26px;
 }
 
 .header{
@@ -50,9 +56,10 @@ body{
 }
 
 .title__name{
-  font-size: 20px;
-  font-weight: 750;
-  letter-spacing: 0.2px;
+  font-family: var(--font-base);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 .title__hint{
   margin-top: 4px;
@@ -74,12 +81,17 @@ body{
   padding: 8px 10px;
   min-width: 120px;
   text-align: right;
+  font-family: var(--font-base);
+  font-weight: 700;
+  font-size: 18px;
 }
 .hud__label{
   display: inline-block;
   color: var(--muted);
   margin-right: 8px;
-  font-size: 12px;
+  font-size: 18px;
+  font-family: var(--font-base);
+  font-weight: 700;
 }
 .hud__item--btn{
   min-width: 100px;
@@ -99,29 +111,52 @@ body{
   transform: translateY(1px);
 }
 
-.main{
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 14px;
-  margin-top: 14px;
-}
-@media (max-width: 960px){
-  .main{ grid-template-columns: 1fr; }
-}
-
 .gameWrap{
   position: relative;
   background: var(--panel);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 14px;
   padding: 14px;
-}
-
-.gameWrap.weather--sun{
-  /* Slightly more yellow-green than default */
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  /* Sunny field palette; rain overrides below. */
   --field: #3a5f2a;
   --field2: #3f6a32;
 }
+
+/* Fills the farm card; size query drives the square grid. */
+.gridViewportWrap{
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+  container-name: game-viewport;
+}
+
+/* Square farm: fit inside .gridViewportWrap (viewport minus header, chrome). */
+.gridViewport{
+  width: min(100%, min(calc(100vw - 36px), calc(100dvh - 340px)));
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0 auto;
+}
+@supports (width: 1cqw){
+  .gridViewport{
+    width: min(100%, min(100cqw, 100cqh));
+  }
+}
+@supports not (height: 100dvh){
+  .gridViewport{
+    width: min(100%, min(calc(100vw - 36px), calc(100vh - 340px)));
+  }
+}
+
 .gameWrap.weather--rain{
   /* Keep it green (not blue). Waterlogged tiles handle the blue overlay. */
   --field: #2c4a26;
@@ -130,20 +165,22 @@ body{
 
 .grid{
   display: grid;
-  grid-template-columns: repeat(14, var(--tile));
-  grid-template-rows: repeat(14, var(--tile));
-  gap: 2px;
-  width: calc(14 * var(--tile) + 13 * 2px);
-  max-width: 100%;
+  grid-template-columns: repeat(14, 1fr);
+  grid-template-rows: repeat(14, 1fr);
+  gap: clamp(1px, 0.35vmin, 2px);
+  width: 100%;
+  height: 100%;
   user-select: none;
   outline: none;
 }
 
 .tile{
   position: relative;
-  width: var(--tile);
-  height: var(--tile);
-  border-radius: 10px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 22%;
   border: 1px solid var(--gridLine);
   overflow: hidden;
 }
@@ -205,31 +242,46 @@ body{
   left: 50%;
   top: 52%;
   transform: translate(-50%, -50%);
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  /* Sizes relative to ~44px reference tile */
+  width: 77.27%;
+  height: 77.27%;
+  max-width: 95%;
+  max-height: 95%;
+  border-radius: 22.7%;
   border: 1px solid rgba(255,255,255,0.18);
   background: transparent;
   z-index: 2;
 }
 .crop[data-stage="seed"]{
-  width: 14px; height: 14px; border-radius: 999px;
+  width: 31.82%;
+  height: 31.82%;
+  border-radius: 999px;
   background: rgba(255,255,255,0.18);
 }
 .crop[data-stage="sprout"]{
-  width: 24px; height: 24px; border-radius: 10px;
+  width: 54.55%;
+  height: 54.55%;
+  border-radius: 22.7%;
 }
 .crop[data-stage="grown"]{
-  width: 34px; height: 34px; border-radius: 12px;
+  width: 77.27%;
+  height: 77.27%;
+  border-radius: 27.3%;
 }
 .crop[data-crop="cactusFruit"][data-stage="seed"]{
-  width: 18px; height: 18px; border-radius: 999px;
+  width: 40.91%;
+  height: 40.91%;
+  border-radius: 999px;
 }
 .crop[data-crop="cactusFruit"][data-stage="sprout"]{
-  width: 28px; height: 28px; border-radius: 12px;
+  width: 63.64%;
+  height: 63.64%;
+  border-radius: 27.3%;
 }
 .crop[data-crop="cactusFruit"][data-stage="grown"]{
-  width: 42px; height: 42px; border-radius: 14px;
+  width: 95.45%;
+  height: 95.45%;
+  border-radius: 31.8%;
 }
 
 .crop__label{
@@ -238,7 +290,7 @@ body{
   top: 50%;
   transform: translate(-50%, -50%);
   font-weight: 800;
-  font-size: 12px;
+  font-size: clamp(8px, 2.8vmin, 12px);
   letter-spacing: 0.2px;
   color: rgba(0,0,0,0.65);
   mix-blend-mode: screen;
@@ -259,10 +311,11 @@ body{
 }
 .crop__bar{
   position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 6px;
-  height: 5px;
+  left: 13.6%;
+  right: 13.6%;
+  bottom: 13.6%;
+  height: 11.36%;
+  min-height: 3px;
   border-radius: 999px;
   background: rgba(0,0,0,0.32);
   border: 1px solid rgba(255,255,255,0.10);
@@ -276,15 +329,15 @@ body{
 
 .harvestReady{
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 16px;
-  height: 16px;
-  border-radius: 6px;
+  top: 9.09%;
+  right: 9.09%;
+  width: clamp(12px, 36.36%, 22px);
+  height: clamp(12px, 36.36%, 22px);
+  border-radius: 37.5%;
   background: rgba(255, 220, 80, 0.95);
   color: rgba(25, 12, 0, 0.92);
   font-weight: 900;
-  font-size: 12px;
+  font-size: clamp(8px, 2.8vmin, 12px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -298,26 +351,30 @@ body{
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 18px;
+  font-size: clamp(12px, 4vmin, 18px);
   filter: drop-shadow(0 8px 10px rgba(0,0,0,0.35));
   z-index: 2;
 }
 
 .farmer__img{
-  width: 26px;
-  height: 26px;
+  width: clamp(16px, 59.09%, 40px);
+  height: clamp(16px, 59.09%, 40px);
   display: block;
   image-rendering: pixelated;
   pointer-events: none;
 }
 
 .legend{
+  flex-shrink: 0;
   margin-top: 12px;
   color: var(--muted);
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   font-size: 13px;
+}
+.card .legend{
+  margin-top: 0;
 }
 .legend__row{
   display: flex;
@@ -338,14 +395,19 @@ body{
 
 .seedActions{
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-items: center;
   margin-top: 10px;
-  flex-wrap: wrap;
 }
-.seedActions .btn{
-  flex: 0 0 auto;
-  min-width: 120px;
+.seedActions__btns{
+  display: flex;
+  gap: 8px;
+}
+.seedActions__btns .btn{
+  flex: 1;
+  min-width: 0;
+  padding: 10px 4px;
+  font-size: 13px;
 }
 
 .seedInventory{
@@ -377,8 +439,10 @@ body{
   padding: 14px;
 }
 .card__title{
-  font-weight: 760;
-  letter-spacing: 0.2px;
+  font-family: var(--font-base);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   margin-bottom: 10px;
 }
 .shopRow{
@@ -408,6 +472,7 @@ body{
   gap: 10px;
   align-items: center;
   min-width: 0;
+  flex-wrap: wrap; /* allow wrapping instead of overflowing on tight screens */
 }
 .fileInput{
   flex: 1;
@@ -417,11 +482,6 @@ body{
   border-radius: 12px;
   padding: 8px 10px;
   min-width: 0; /* allow shrinking inside flex/grid */
-}
-
-/* When space is tight, allow wrapping instead of overflowing */
-.loadRow{
-  flex-wrap: wrap;
 }
 
 @media (max-width: 420px){
@@ -440,7 +500,12 @@ body{
     align-items: stretch;
   }
 }
-.label{ color: var(--muted); font-size: 13px; }
+.label{
+  color: var(--muted);
+  font-size: 13px;
+  font-family: var(--font-base);
+  font-weight: 700;
+}
 .select{
   width: 100%;
   background: #0f1630;

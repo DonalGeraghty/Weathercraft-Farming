@@ -1,0 +1,123 @@
+/*
+ * layout.css — app shell only: grid, column widths, region placement, responsive order.
+ * Colours, borders, and component chrome live in styles.css (:root tokens + rules).
+ *
+ * regions:
+ *   .header       — title block + HUD row (Day, Time, Weather, Money, Pause)
+ *   .panel--left  — How to Play, Music, Save / Load
+ *   .gameWrap     — playfield (#grid) only
+ *   .panel--right — Seed Shop, Weather Machine, Legend
+ */
+
+.app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 18px 18px 26px;
+  box-sizing: border-box;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(280px, 320px);
+  grid-template-areas: "left center right";
+  gap: 14px;
+  margin-top: 14px;
+  align-items: start;
+}
+
+/* One-screen desktop: fill viewport; main row height caps to remaining space; sidebars scroll. */
+@media (min-width: 961px) {
+  html,
+  body {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .app {
+    height: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header {
+    flex-shrink: 0;
+  }
+
+  .main {
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .panel--left,
+  .panel--right {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .gameWrap {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+.panel--left {
+  grid-area: left;
+}
+
+.gameWrap {
+  grid-area: center;
+}
+
+.panel--right {
+  grid-area: right;
+}
+
+/* Slightly more space before Pause (matches header wireframe). */
+.hud__item--btn {
+  margin-left: 12px;
+}
+
+@media (max-width: 960px) {
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "center"
+      "right"
+      "left";
+  }
+
+  .hud__item--btn {
+    margin-left: 0;
+  }
+
+  html,
+  body {
+    height: auto;
+    max-height: none;
+    overflow: auto;
+  }
+
+  .app {
+    height: auto;
+    max-height: none;
+    display: block;
+  }
+
+  .main {
+    min-height: 0;
+  }
+
+  .panel--left,
+  .panel--right {
+    overflow: visible;
+  }
+
+  .gameWrap {
+    height: auto;
+  }
+}
