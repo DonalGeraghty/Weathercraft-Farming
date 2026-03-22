@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- Wooden base -->
+  <rect x="2" y="8" width="12" height="6" fill="#a05b2c"/>
+  <rect x="2" y="13" width="12" height="1" fill="#753d16"/>
+  <rect x="2" y="8" width="12" height="1" fill="#c07844"/>
+  <!-- Posts -->
+  <rect x="3" y="5" width="1" height="3" fill="#e7b539"/>
+  <rect x="12" y="5" width="1" height="3" fill="#e7b539"/>
+  <!-- Awning (white background, red stripes) -->
+  <rect x="1" y="2" width="14" height="3" fill="#f0f0f0"/>
+  <rect x="1" y="2" width="3" height="4" fill="#d93a3a"/>
+  <rect x="6" y="2" width="4" height="4" fill="#d93a3a"/>
+  <rect x="12" y="2" width="3" height="4" fill="#d93a3a"/>
+  <!-- Shop text (S H O P) roughly written -->
+  <rect x="4" y="10" width="1" height="2" fill="#e7b539"/>
+  <rect x="6" y="10" width="1" height="2" fill="#e7b539"/>
+  <rect x="8" y="10" width="1" height="2" fill="#e7b539"/>
+  <rect x="10" y="10" width="1" height="2" fill="#e7b539"/>
+</svg>

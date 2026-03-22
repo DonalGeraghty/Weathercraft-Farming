@@ -6,7 +6,6 @@ const CROPS = {
   carrot: {
     id: "carrot",
     name: "Carrot",
-    color: "#ff8a3d",
     label: "C",
     daysToGrow: 6,
     weatherGrowthMultipliers: { sun: 1.35, rain: 0.7 },
@@ -16,7 +15,6 @@ const CROPS = {
   onion: {
     id: "onion",
     name: "Onion",
-    color: "#f0d5ff",
     label: "O",
     daysToGrow: 8,
     weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
@@ -26,7 +24,6 @@ const CROPS = {
   cabbage: {
     id: "cabbage",
     name: "Cabbage",
-    color: "#7dff86",
     label: "B",
     daysToGrow: 10,
     weatherGrowthMultipliers: { sun: 0.7, rain: 1.35 },
@@ -36,8 +33,6 @@ const CROPS = {
   watercress: {
     id: "watercress",
     name: "Watercress",
-    // Teal/green so it reads well vs waterlogged/scorched overlays.
-    color: "#37e6d2",
     label: "W",
     daysToGrow: 10,
     weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
@@ -49,7 +44,6 @@ const CROPS = {
   cactusFruit: {
     id: "cactusFruit",
     name: "Cactus Fruit",
-    color: "#f7a93c",
     label: "F",
     daysToGrow: 10,
     weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
@@ -65,13 +59,42 @@ const WEATHER = {
   rain: { id: "rain", name: "Rain", growthMultiplier: 1.35 },
 };
 
-// Weather change chance starts at 0%.
-// Each € spent adds +1% chance (so 10€ => 10%).
-const WEATHER_BASE_CHANGE_CHANCE = 0;
-const WEATHER_CHANGE_CHANCE_PER_EURO = 0.01; // +1% per € spent
+// Weather machine: each € committed adds +1% chance to apply the selected weather at midnight.
+const WEATHER_CHANGE_CHANCE_PER_EURO = 0.01;
+
+// The base volume multipliers of the background music.
+const DAY_BGM_MIX = 0.8;
+const NIGHT_BGM_MIX = 3.0; // Boosted because the night track is mastered quietly
+
+function getBgmBase() {
+  const bgm = document.getElementById("bgm");
+  if (bgm && bgm.src) {
+    // Determine the base volume by asking what track is actually playing right now.
+    // This prevents the 3.0x multiplier jumping in instantly at 10pm while the day music is still fading out.
+    return bgm.src.includes("Night") ? NIGHT_BGM_MIX : DAY_BGM_MIX;
+  }
+  return (typeof isNighttime === 'function' && isNighttime()) ? NIGHT_BGM_MIX : DAY_BGM_MIX;
+}
+
+// At each midnight, sun/rain may flip on its own (in addition to the weather machine).
+const NATURAL_WEATHER_FLIP_CHANCE = 0.2;
+
+// Rain ambience loudness relative to the BGM volume slider (0–1 each).
+const RAIN_SFX_MIX = 0.42;
+const SUN_SFX_MIX = 3.0; // Boosted heavily because the raw audio file is very quiet
 
 function clamp01(n) {
   return Math.max(0, Math.min(1, n));
+}
+
+function shuffleArrayInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = arr[i];
+    arr[i] = arr[j];
+    arr[j] = t;
+  }
+  return arr;
 }
 
 function cropStage(progress) {
@@ -97,6 +120,12 @@ function formatTimeOfDay(msIntoDay) {
   return `${h12} ${suffix}`;
 }
 
+function isNighttime() {
+  const totalMinutes = Math.floor((state.msIntoDay / MS_PER_DAY) * 24 * 60);
+  const h24 = Math.floor(totalMinutes / 60) % 24;
+  return h24 >= 22 || h24 < 7;
+}
+
 function weightedChoice(items) {
   const sum = items.reduce((a, it) => a + it.weight, 0);
   let r = Math.random() * sum;
@@ -109,9 +138,8 @@ function weightedChoice(items) {
 
 const state = {
   day: 1,
-  msIntoDay: 0,
+  msIntoDay: (9 / 24) * MS_PER_DAY,
   weatherId: "sun",
-  weatherChangeChance: 0,
   weatherMachineSpendCommitted: 0,
   weatherMachineSelection: "sun",
   money: 100,
@@ -120,10 +148,15 @@ const state = {
     carrot: 3,
     onion: 0,
     cabbage: 0,
+    watercress: 0,
+    cactusFruit: 0,
   },
   farmer: { x: 0, y: 0 }, // path tile
   tiles: [],
   paused: false,
+  roosterPlayedToday: true,
+  bgmFadeState: "idle",
+  bgmFadeTimerMs: 0,
 };
 
 // ---- DOM caching for fast rendering ----
@@ -165,7 +198,7 @@ function createInitialTiles() {
 
 function exportStateToCsv() {
   const lines = [];
-  lines.push("WeathercraftFarmingCSV,1");
+  lines.push("WeathercraftFarmingCSV,3");
   lines.push(
     [
       state.day,
@@ -179,6 +212,10 @@ function exportStateToCsv() {
       state.inventory.carrot ?? 0,
       state.inventory.onion ?? 0,
       state.inventory.cabbage ?? 0,
+      state.inventory.watercress ?? 0,
+      state.inventory.cactusFruit ?? 0,
+      state.weatherMachineSpendCommitted ?? 0,
+      state.paused ? 1 : 0,
     ].join(","),
   );
   lines.push("x,y,waterlogged,scorched,blackDaysRemaining,rotDaysRemaining,cropId,progress");
@@ -212,10 +249,21 @@ function importStateFromCsv(csvText) {
     .filter(Boolean);
 
   if (lines.length < 3) throw new Error("CSV is too short.");
-  if (lines[0] !== "WeathercraftFarmingCSV,1") throw new Error("Unrecognized CSV format.");
+  const csvVersion = lines[0];
+  if (
+    csvVersion !== "WeathercraftFarmingCSV,1" &&
+    csvVersion !== "WeathercraftFarmingCSV,2" &&
+    csvVersion !== "WeathercraftFarmingCSV,3"
+  ) {
+    throw new Error("Unrecognized CSV format.");
+  }
 
   const meta = parseCsvLine(lines[1]);
-  if (meta.length < 11) throw new Error("CSV meta row is invalid.");
+  const legacyV1 = csvVersion === "WeathercraftFarmingCSV,1";
+  const legacyV2 = csvVersion === "WeathercraftFarmingCSV,2";
+  if (legacyV1 && meta.length < 11) throw new Error("CSV meta row is invalid.");
+  if (legacyV2 && meta.length < 13) throw new Error("CSV meta row is invalid.");
+  if (csvVersion === "WeathercraftFarmingCSV,3" && meta.length < 15) throw new Error("CSV meta row is invalid.");
 
   const [
     day,
@@ -229,6 +277,10 @@ function importStateFromCsv(csvText) {
     invCarrot,
     invOnion,
     invCabbage,
+    invWatercress,
+    invCactusFruit,
+    metaWeatherSpend,
+    metaPaused,
   ] = meta;
 
   state.day = Number(day) || 1;
@@ -242,6 +294,12 @@ function importStateFromCsv(csvText) {
   state.inventory.carrot = Number(invCarrot) || 0;
   state.inventory.onion = Number(invOnion) || 0;
   state.inventory.cabbage = Number(invCabbage) || 0;
+  state.inventory.watercress = legacyV1 ? 0 : Number(invWatercress) || 0;
+  state.inventory.cactusFruit = legacyV1 ? 0 : Number(invCactusFruit) || 0;
+  state.weatherMachineSpendCommitted =
+    csvVersion === "WeathercraftFarmingCSV,3" ? Math.max(0, Number(metaWeatherSpend) || 0) : 0;
+  state.paused =
+    csvVersion === "WeathercraftFarmingCSV,3" && (metaPaused === "1" || metaPaused === "true");
 
   state.tiles = createInitialTiles();
 
@@ -322,18 +380,27 @@ function importStateFromCsv(csvText) {
     }
   }
 
+  for (const tile of state.tiles) {
+    reconcileExclusiveHazards(tile);
+  }
+
   // Ensure any loaded crops obey the hazard placement rules.
   enforceHazardPlantValidity();
+
+  state.roosterPlayedToday = state.msIntoDay >= (7 / 24) * MS_PER_DAY;
 
   setWeatherTheme();
   updateWeatherMachineUi();
   updateHud();
   updateShopInfo();
+  setPaused(state.paused);
+  const seedSelectEl = document.getElementById("seedSelect");
+  if (seedSelectEl) seedSelectEl.value = state.selectedSeedId;
   renderAll();
   updateHighlights();
 }
 
-function weatherForDay(day) {
+function weatherForDay() {
   return weightedChoice([
     { value: "sun", weight: 0.62 },
     { value: "rain", weight: 0.38 },
@@ -346,16 +413,12 @@ function weatherIcon(weatherId) {
 }
 
 function maybeChangeWeatherAtMidnight() {
-  if (Math.random() >= state.weatherChangeChance) return;
-  // "Chance to change" means it can flip between sun and rain.
+  if (Math.random() >= NATURAL_WEATHER_FLIP_CHANCE) return;
   state.weatherId = state.weatherId === "sun" ? "rain" : "sun";
 }
 
 function getEffectiveWeatherChangeChance() {
-  // Chance to apply the weather machine's selected target weather.
-  return clamp01(
-    WEATHER_BASE_CHANGE_CHANCE + WEATHER_CHANGE_CHANCE_PER_EURO * (state.weatherMachineSpendCommitted ?? 0),
-  );
+  return clamp01(WEATHER_CHANGE_CHANCE_PER_EURO * (state.weatherMachineSpendCommitted ?? 0));
 }
 
 function applyWeatherMachineAtMidnight() {
@@ -382,7 +445,7 @@ function setPaused(next) {
 
 function init() {
   state.tiles = createInitialTiles();
-  state.weatherId = weatherForDay(state.day);
+  state.weatherId = weatherForDay();
   state.weatherMachineSelection = state.weatherId;
   buildGridDom();
   bindUi();
@@ -393,15 +456,47 @@ function init() {
   startLoop();
 }
 
+function syncWeatherAmbience() {
+  const rain = document.getElementById("rainSfx");
+  const sun = document.getElementById("sunnySfx");
+  const bgm = document.getElementById("bgm");
+  if (!rain || !sun || !bgm) return;
+
+  const wantRain = state.weatherId === "rain";
+  const wantSun = state.weatherId === "sun";
+  const musicGoing = !bgm.paused && !bgm.muted && bgm.volume > 0;
+
+  // Read the original master volume before the BGM reduction
+  const masterVol = bgm.volume / getBgmBase();
+
+  // Set volumes independently
+  rain.volume = clamp01(masterVol * RAIN_SFX_MIX);
+  sun.volume = clamp01(masterVol * SUN_SFX_MIX);
+
+  if (wantRain && musicGoing) {
+    rain.play().catch(() => {});
+  } else {
+    rain.pause();
+  }
+
+  if (wantSun && musicGoing) {
+    console.log(`Audio: Attempting to play Sunny SFX at volume ${sun.volume.toFixed(3)}`);
+    sun.play().catch(err => {
+      console.error("Audio: Sunny SFX playback failed:", err);
+    });
+  } else {
+    if (sun.paused === false) {
+      console.log(`Audio: Pausing Sunny SFX (wantSun: ${wantSun}, musicGoing: ${musicGoing})`);
+      sun.pause();
+    }
+  }
+}
+
 function setWeatherTheme() {
   const wrap = document.querySelector(".gameWrap");
   if (!wrap) return;
   wrap.classList.toggle("weather--rain", state.weatherId === "rain");
-  wrap.classList.toggle("weather--sun", state.weatherId !== "rain");
-}
-
-function fieldCount() {
-  return FIELD_SIZE * FIELD_SIZE;
+  syncWeatherAmbience();
 }
 
 function isAdjacentToWaterlogged(x, y) {
@@ -431,6 +526,13 @@ function isAdjacentToWaterlogged(x, y) {
   }
 
   return false;
+}
+
+/** A field tile may be waterlogged or scorched, never both; waterlogged wins if a save had both. */
+function reconcileExclusiveHazards(tile) {
+  if (!tile || tile.kind !== "field") return;
+  if (tile.waterlogged) tile.scorched = false;
+  else tile.waterlogged = false;
 }
 
 function enforceHazardPlantValidity() {
@@ -482,77 +584,7 @@ function enforceHazardPlantValidity() {
   }
 }
 
-function clearWaterloggedCells() {
-  for (const tile of state.tiles) {
-    if (tile.kind !== "field") continue;
-    tile.waterlogged = false;
-  }
-}
-
-function clearScorchedCells() {
-  for (const tile of state.tiles) {
-    if (tile.kind !== "field") continue;
-    tile.scorched = false;
-  }
-}
-
-function addWaterloggedCellsForRain() {
-  // Weather controls how often the land becomes waterlogged.
-  const addCount = 5;
-  addWaterloggedCells(addCount);
-}
-
-function removeHalfWaterloggedCells() {
-  const waterloggedIdxs = [];
-  for (let i = 0; i < state.tiles.length; i++) {
-    const tile = state.tiles[i];
-    if (tile.kind !== "field") continue;
-    if (!tile.waterlogged) continue;
-    waterloggedIdxs.push(i);
-  }
-
-  const removeCount = Math.floor(waterloggedIdxs.length * 0.5);
-  if (removeCount <= 0) return;
-
-  for (let i = waterloggedIdxs.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = waterloggedIdxs[i];
-    waterloggedIdxs[i] = waterloggedIdxs[j];
-    waterloggedIdxs[j] = tmp;
-  }
-
-  const toRemove = waterloggedIdxs.slice(0, removeCount);
-  for (const idx of toRemove) state.tiles[idx].waterlogged = false;
-}
-
-function removeHalfScorchedCells() {
-  const scorchedIdxs = [];
-  for (let i = 0; i < state.tiles.length; i++) {
-    const tile = state.tiles[i];
-    if (tile.kind !== "field") continue;
-    if (!tile.scorched) continue;
-    scorchedIdxs.push(i);
-  }
-
-  const removeCount = Math.floor(scorchedIdxs.length * 0.5);
-  if (removeCount <= 0) return;
-
-  for (let i = scorchedIdxs.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = scorchedIdxs[i];
-    scorchedIdxs[i] = scorchedIdxs[j];
-    scorchedIdxs[j] = tmp;
-  }
-
-  const toRemove = scorchedIdxs.slice(0, removeCount);
-  for (const idx of toRemove) state.tiles[idx].scorched = false;
-}
-
-function addScorchedCellsForSun() {
-  // Weather controls how often the land becomes scorched.
-  const addCount = 5;
-  addScorchedCells(addCount);
-}
+// (Helpers removed: 7AM weather hazard decay disabled)
 
 function addWaterloggedCells(addCount) {
   if (addCount <= 0) return;
@@ -565,21 +597,29 @@ function addWaterloggedCells(addCount) {
     candidates.push(i);
   }
 
-  // Fisher-Yates shuffle.
-  for (let i = candidates.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = candidates[i];
-    candidates[i] = candidates[j];
-    candidates[j] = tmp;
-  }
+  shuffleArrayInPlace(candidates);
 
   const toApply = candidates.slice(0, addCount);
   for (const idx of toApply) {
     const tile = state.tiles[idx];
     tile.waterlogged = true;
+    tile.scorched = false;
     tile.crop = null; // destroys any vegetables
     tile.readyRotMsRemaining = 0; // prevents rotting after being destroyed
     tile.blackMsRemaining = 0; // hazards overwrite rot
+    
+    // Revert Scorched cells within 2 spaces
+    const cx = idx % WORLD_SIZE;
+    const cy = Math.floor(idx / WORLD_SIZE);
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const nx = cx + dx;
+        const ny = cy + dy;
+        if (!isField(nx, ny)) continue;
+        const nIdx = tileIndex(nx, ny);
+        state.tiles[nIdx].scorched = false;
+      }
+    }
   }
 }
 
@@ -594,21 +634,29 @@ function addScorchedCells(addCount) {
     candidates.push(i);
   }
 
-  // Fisher-Yates shuffle.
-  for (let i = candidates.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = candidates[i];
-    candidates[i] = candidates[j];
-    candidates[j] = tmp;
-  }
+  shuffleArrayInPlace(candidates);
 
   const toApply = candidates.slice(0, addCount);
   for (const idx of toApply) {
     const tile = state.tiles[idx];
     tile.scorched = true;
+    tile.waterlogged = false;
     tile.crop = null; // destroys any vegetables
     tile.readyRotMsRemaining = 0; // prevents rotting after being destroyed
     tile.blackMsRemaining = 0; // hazards overwrite rot
+
+    // Revert Waterlogged cells within 2 spaces
+    const cx = idx % WORLD_SIZE;
+    const cy = Math.floor(idx / WORLD_SIZE);
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const nx = cx + dx;
+        const ny = cy + dy;
+        if (!isField(nx, ny)) continue;
+        const nIdx = tileIndex(nx, ny);
+        state.tiles[nIdx].waterlogged = false;
+      }
+    }
   }
 }
 
@@ -636,6 +684,19 @@ function buildGridDom() {
       el.className = `tile ${tile.kind === "field" ? "tile--field" : "tile--path"}`;
       if (tile.kind === "field" && (x + y) % 2 === 0) el.classList.add("alt");
       el.setAttribute("role", "gridcell");
+      
+      if (x === 13 && y === 0) {
+        const shopIcon = document.createElement("img");
+        shopIcon.src = "./pixel-shop.svg";
+        shopIcon.style.position = "absolute";
+        shopIcon.style.inset = "5%";
+        shopIcon.style.width = "90%";
+        shopIcon.style.height = "90%";
+        shopIcon.style.objectFit = "cover";
+        shopIcon.style.imageRendering = "pixelated";
+        el.appendChild(shopIcon);
+      }
+
       gridEl.appendChild(el);
 
       tileEls[idx] = el;
@@ -708,6 +769,7 @@ function bindUi() {
   });
 
   function tryBuySelectedSeed(count = 1) {
+    if (state.farmer.x !== 13 || state.farmer.y !== 0) return;
     const crop = CROPS[state.selectedSeedId];
     if (!crop) return;
     if (count <= 0) return;
@@ -760,6 +822,7 @@ function bindUi() {
     tryMove(dx, dy);
     if (state.farmer.x !== prevX || state.farmer.y !== prevY) {
       maybeHarvestAndPlant();
+      updateShopInfo();
     }
   }
 
@@ -800,6 +863,9 @@ function bindUi() {
 
     if (state.paused) return;
 
+    const activeTag = (document.activeElement?.tagName ?? "").toLowerCase();
+    const isTyping = ["input", "textarea", "select"].includes(activeTag);
+
     if (["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright", " ", "e"].includes(key)) {
       e.preventDefault();
     }
@@ -818,33 +884,21 @@ function bindUi() {
       if (!e.repeat) tryHarvestHere();
     }
 
-    // Keyboard-only shop controls:
-    // 1-5 selects seed; B buys one seed.
-    if (/^[1-5]$/.test(e.key)) {
-      const idx = Number(e.key) - 1;
-      const nextSeedId = SEED_KEY_ORDER[idx];
-      if (nextSeedId) {
-        state.selectedSeedId = nextSeedId;
-        if (seedSelect) seedSelect.value = nextSeedId;
-        updateShopInfo();
-        updateHighlights();
+    // Shop hotkeys (disabled while focus is in a form field so typing works normally).
+    if (!isTyping) {
+      if (/^[1-5]$/.test(e.key)) {
+        const idx = Number(e.key) - 1;
+        const nextSeedId = SEED_KEY_ORDER[idx];
+        if (nextSeedId) {
+          state.selectedSeedId = nextSeedId;
+          if (seedSelect) seedSelect.value = nextSeedId;
+          updateShopInfo();
+          updateHighlights();
+        }
       }
-    }
-    if (key === "b") {
-      // Optional: Shift+B buys 5 if possible.
-      const count = e.shiftKey ? 5 : 1;
-      tryBuySelectedSeed(count);
-    }
-
-    // Seed shop quick-purchase hotkeys:
-    // N => buy 5 seeds, M => buy 10 seeds.
-    if (!["p", "w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright", " ", "e"].includes(key)) {
-      const activeTag = (document.activeElement?.tagName ?? "").toLowerCase();
-      const isTyping = ["input", "textarea", "select"].includes(activeTag);
-      if (!isTyping) {
-        if (key === "n") tryBuySelectedSeed(5);
-        if (key === "m") tryBuySelectedSeed(10);
-      }
+      if (key === "b") tryBuySelectedSeed(1);
+      if (key === "n") tryBuySelectedSeed(5);
+      if (key === "m") tryBuySelectedSeed(10);
     }
   });
 
@@ -910,36 +964,26 @@ function bindUi() {
   const bgm = document.getElementById("bgm");
   const musicPlayBtn = document.getElementById("musicPlayBtn");
   const musicPauseBtn = document.getElementById("musicPauseBtn");
-  const musicMuteBtn = document.getElementById("musicMuteBtn");
   const musicVolumeInput = document.getElementById("musicVolume");
   const musicVolumeValue = document.getElementById("musicVolumeValue");
 
-  if (bgm && musicPlayBtn && musicPauseBtn && musicMuteBtn && musicVolumeInput && musicVolumeValue) {
-    const clamp01 = (n) => Math.max(0, Math.min(1, n));
-
+  if (bgm && musicPlayBtn && musicPauseBtn && musicVolumeInput && musicVolumeValue) {
     const setUiPlaying = (isPlaying) => {
       musicPlayBtn.disabled = isPlaying;
       musicPauseBtn.disabled = !isPlaying;
     };
 
-    const setUiMuted = () => {
-      musicMuteBtn.textContent = bgm.muted ? "Unmute" : "Mute";
-    };
-
     const syncVolumeUi = () => {
-      const v = clamp01(bgm.volume);
-      const pct = Math.round(v * 100);
+      const pct = Math.max(0, Math.min(100, Number(musicVolumeInput.value) || 0));
       if (musicVolumeValue.textContent !== `${pct}%`) musicVolumeValue.textContent = `${pct}%`;
-      if (String(musicVolumeInput.value) !== String(pct)) musicVolumeInput.value = String(pct);
     };
 
     // Apply initial slider volume and attempt autoplay (may still be blocked by browser policy).
     const initialPct = Math.max(0, Math.min(100, Number(musicVolumeInput.value) || 0));
-    bgm.volume = clamp01(initialPct / 100);
+    bgm.volume = clamp01((initialPct / 100) * getBgmBase());
     bgm.muted = false;
     syncVolumeUi();
     setUiPlaying(false);
-    setUiMuted();
     musicPauseBtn.disabled = true;
 
     // Try to start music immediately on load.
@@ -959,26 +1003,24 @@ function bindUi() {
       bgm.pause();
     });
 
-    musicMuteBtn.addEventListener("click", () => {
-      bgm.muted = !bgm.muted;
-      setUiMuted();
-      // If unmuting, also reflect volume UI.
-      syncVolumeUi();
-    });
-
     musicVolumeInput.addEventListener("input", () => {
       const pct = Math.max(0, Math.min(100, Number(musicVolumeInput.value) || 0));
-      bgm.volume = clamp01(pct / 100);
+      bgm.volume = clamp01((pct / 100) * getBgmBase());
       if (bgm.volume > 0) bgm.muted = false;
-      setUiMuted();
       syncVolumeUi();
     });
 
-    bgm.addEventListener("play", () => setUiPlaying(true));
-    bgm.addEventListener("pause", () => setUiPlaying(false));
+    bgm.addEventListener("play", () => {
+      setUiPlaying(true);
+      syncWeatherAmbience();
+    });
+    bgm.addEventListener("pause", () => {
+      setUiPlaying(false);
+      syncWeatherAmbience();
+    });
     bgm.addEventListener("volumechange", () => {
-      setUiMuted();
       syncVolumeUi();
+      syncWeatherAmbience();
     });
   }
 }
@@ -1025,17 +1067,32 @@ function updateShopInfo() {
   document.getElementById("inventoryValue").textContent = invParts.join(" · ");
 
   const btn = document.getElementById("buySeedBtn");
-  btn.disabled = !crop || state.money < crop.seedCost;
+  const btn5 = document.getElementById("buySeed5Btn");
+  const btn10 = document.getElementById("buySeed10Btn");
+  const isAtShop = state.farmer.x === 13 && state.farmer.y === 0;
+
+  if (btn) btn.disabled = !crop || !isAtShop || state.money < crop.seedCost * 1;
+  if (btn5) btn5.disabled = !crop || !isAtShop || state.money < crop.seedCost * 5;
+  if (btn10) btn10.disabled = !crop || !isAtShop || state.money < crop.seedCost * 10;
+
+  if (!isAtShop && seedInfo) {
+    seedInfo.innerHTML = `<span style="color:var(--danger);font-weight:bold;">Stand on Shop tile (top-right) to buy</span><br/>${seedInfo.textContent}`;
+  }
 }
 
 function updateHud() {
   document.getElementById("dayValue").textContent = String(state.day);
   document.getElementById("timeValue").textContent = formatTimeOfDay(state.msIntoDay);
-  document.getElementById("weatherValue").textContent = WEATHER[state.weatherId]?.name ?? state.weatherId;
+  
   const iconEl = document.getElementById("weatherIcon");
-  if (iconEl) iconEl.textContent = weatherIcon(state.weatherId);
-  const chanceEl = document.getElementById("weatherChanceValue");
-  if (chanceEl) chanceEl.textContent = `${Math.round(getEffectiveWeatherChangeChance() * 100)}%`;
+  if (isNighttime()) {
+    document.getElementById("weatherValue").textContent = "Night";
+    if (iconEl) iconEl.textContent = "🌙";
+  } else {
+    document.getElementById("weatherValue").textContent = WEATHER[state.weatherId]?.name ?? state.weatherId;
+    if (iconEl) iconEl.textContent = weatherIcon(state.weatherId);
+  }
+
   document.getElementById("moneyValue").textContent = String(state.money);
 }
 
@@ -1075,54 +1132,92 @@ function startLoop() {
 
 function tick(dtMs) {
   state.msIntoDay += dtMs;
-  if (state.msIntoDay >= MS_PER_DAY) {
-    state.msIntoDay -= MS_PER_DAY;
-    state.day += 1;
+
+  const bgm = document.getElementById("bgm");
+  if (bgm) {
+    const wantNightSrc = isNighttime();
+    const hasNightSrc = bgm.src.includes("Night");
+    const FADE_LIMIT_MS = 5000;
+
+    // Trigger fade array if a swap is needed and we are not currently transitioning
+    if (wantNightSrc !== hasNightSrc && state.bgmFadeState === "idle") {
+      if (wantNightSrc) {
+        // Sunset: Crossfade
+        state.bgmFadeState = "fadeOut";
+        state.bgmFadeTimerMs = 0;
+      } else {
+        // Sunrise: Immediate snap
+        bgm.src = "./Music%20-%20Day%2001.mp3";
+        if (!bgm.paused || bgm.volume > 0) bgm.play().catch(() => {});
+      }
+    }
+
+    // Process fading animation
+    let fadeMult = 1.0;
+    if (state.bgmFadeState === "fadeOut") {
+      state.bgmFadeTimerMs += dtMs;
+      fadeMult = 1.0 - clamp01(state.bgmFadeTimerMs / FADE_LIMIT_MS);
+      if (fadeMult <= 0) {
+        bgm.src = wantNightSrc ? "./Music%20-%20Night%2001.mp3" : "./Music%20-%20Day%2001.mp3";
+        state.bgmFadeState = "fadeIn";
+        state.bgmFadeTimerMs = 0;
+        if (!bgm.paused || bgm.volume > 0) bgm.play().catch(() => {});
+      }
+    } else if (state.bgmFadeState === "fadeIn") {
+      state.bgmFadeTimerMs += dtMs;
+      fadeMult = clamp01(state.bgmFadeTimerMs / FADE_LIMIT_MS);
+      if (fadeMult >= 1.0) {
+        state.bgmFadeState = "idle";
+      }
+    }
+
+    const musicVolumeInput = document.getElementById("musicVolume");
+    const pct = musicVolumeInput ? (Number(musicVolumeInput.value) || 0) : 10;
+    bgm.volume = clamp01((pct / 100) * getBgmBase() * fadeMult);
+  }
+
+  // 7 AM rooster crow and daily transitions: (7/24) of a day.
+  const roosterThreshold = (7 / 24) * MS_PER_DAY;
+  if (!state.roosterPlayedToday && state.msIntoDay >= roosterThreshold) {
+    state.roosterPlayedToday = true;
+    const rooster = document.getElementById("roosterSfx");
+    const bgm = document.getElementById("bgm");
+    if (rooster && bgm) {
+      rooster.volume = clamp01(bgm.volume * 0.8);
+      rooster.play().catch(() => {});
+    }
+
     const prevWeather = state.weatherId;
     applyWeatherMachineAtMidnight();
+    maybeChangeWeatherAtMidnight();
     updateWeatherMachineUi();
 
     const nextWeather = state.weatherId;
     const isSwap = prevWeather !== nextWeather;
 
     if (nextWeather === "rain") {
-      if (isSwap) {
-        // Sunny -> rainy: 3 new waterlogged, and 2 scorched.
-        addWaterloggedCells(3);
-        addScorchedCells(2);
-      } else {
-        // Regular rainy day: only 5 new waterlogged.
-        addWaterloggedCellsForRain();
-      }
-      // Only shrink scorched on regular rainy days.
-      if (!isSwap) removeHalfScorchedCells();
+      addWaterloggedCells(isSwap ? 3 : 5);
     } else {
-      if (isSwap) {
-        // Rainy -> sunny: 3 new scorched, and 2 waterlogged.
-        addScorchedCells(3);
-        addWaterloggedCells(2);
-      } else {
-        // Regular sunny day: only 5 new scorched.
-        addScorchedCellsForSun();
-      }
-      // Only shrink waterlogged on regular sunny days.
-      if (!isSwap) removeHalfWaterloggedCells();
+      addScorchedCells(isSwap ? 3 : 5);
     }
 
-    // Hazards may have changed what crops are allowed to exist.
     enforceHazardPlantValidity();
-
     setWeatherTheme();
-
-    growAllCrops(1);
-    updateRotAndBlack(MS_PER_DAY);
-  } else {
-    growAllCrops(dtMs / MS_PER_DAY);
-    updateRotAndBlack(dtMs);
   }
+
+  if (state.msIntoDay >= MS_PER_DAY) {
+    state.msIntoDay -= MS_PER_DAY;
+    state.day += 1;
+    state.roosterPlayedToday = false;
+  }
+
+  growAllCrops(dtMs / MS_PER_DAY);
+  updateRotAndBlack(dtMs);
 }
 
 function growAllCrops(dayFraction) {
+  if (isNighttime()) return;
+
   const w = WEATHER[state.weatherId] ?? WEATHER.sun;
   const globalMultiplier = w.growthMultiplier;
 

@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Weathercraft Farming</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./css/styles.css" />
+    <link rel="stylesheet" href="./css/layout.css" />
   </head>
   <body>
     <div class="app">
@@ -23,7 +24,6 @@
               <span id="weatherValue">Sun</span>
             </span>
           </div>
-          <div class="hud__item"><span class="hud__label">Change</span> <span id="weatherChanceValue">50%</span></div>
           <div class="hud__item"><span class="hud__label">Money</span> €<span id="moneyValue">0</span></div>
           <div class="hud__item hud__item--btn">
             <button id="pauseBtn" class="btn pauseBtn" type="button">Pause</button>
@@ -32,23 +32,56 @@
       </header>
 
       <main class="main">
-        <section class="gameWrap" aria-label="Farm view">
-          <div id="grid" class="grid" role="grid" aria-label="Farm grid"></div>
-          <div class="legend" aria-label="Controls">
-            <div class="legend__row"><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> Move</div>
-            <div class="legend__row"><span class="kbd">Space</span> Plant seed on current empty field tile</div>
-            <div class="legend__row"><span class="kbd">E</span> Harvest fully-grown crop on current tile</div>
-            <div class="legend__hintPanel">
-              Keys: <b>1</b>=Carrot, <b>2</b>=Onion, <b>3</b>=Cabbage, <b>4</b>=Watercress, <b>5</b>=Cactus Fruit
+        <aside class="panel panel--left" aria-label="Help and settings">
+          <div class="card">
+            <div class="card__title">How it works</div>
+            <ul class="list">
+              <li><b>Stand on Shop (top-right) to buy.</b></li>
+              <li><b>Harvest grown crops before they rot.</b></li>
+              <li><b>Extreme weather kills regular plants.</b></li>
+              <li><b>Specialty seeds thrive in hazards.</b></li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card__title">Background Music</div>
+            <div class="musicControls">
+              <button id="musicPlayBtn" class="btn btn--primary" type="button">Play</button>
+              <button id="musicPauseBtn" class="btn" type="button">Pause</button>
             </div>
-            <div class="legend__row"><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span><span class="kbd">5</span> Select seed</div>
-            <div class="legend__row"><span class="kbd">B</span> Buy 1 seed</div>
-            <div class="legend__row"><span class="kbd">N</span> Buy 5 seeds</div>
-            <div class="legend__row"><span class="kbd">M</span> Buy 10 seeds</div>
+            <div class="musicVolumeRow">
+              <div class="label">Volume</div>
+              <input id="musicVolume" class="musicVolume" type="range" min="0" max="100" step="1" value="10" />
+              <div class="small" id="musicVolumeValue">10%</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__title">Save / Load (CSV)</div>
+            <div class="shopRow">
+              <div class="label">Save</div>
+              <button id="saveCsvBtn" class="btn btn--primary" type="button">Download CSV</button>
+            </div>
+            <div class="shopRow">
+              <div class="label">Load</div>
+              <div class="loadRow">
+                <input id="loadCsvInput" class="fileInput" type="file" accept=".csv" />
+                <button id="loadCsvBtn" class="btn" type="button">Upload</button>
+              </div>
+            </div>
+            <div class="small" id="saveLoadStatus"></div>
+          </div>
+        </aside>
+
+        <section class="gameWrap" aria-label="Farm view">
+          <div class="gridViewportWrap">
+            <div class="gridViewport">
+              <div id="grid" class="grid" role="grid" aria-label="Farm grid"></div>
+            </div>
           </div>
         </section>
 
-        <aside class="panel" aria-label="Shop and actions">
+        <aside class="panel panel--right" aria-label="Shop and weather">
           <div class="card">
             <div class="card__title">Seed Shop</div>
             <div class="shopRow">
@@ -56,9 +89,11 @@
               <select id="seedSelect" class="select"></select>
             </div>
             <div class="seedActions">
-              <button id="buySeedBtn" class="btn btn--primary" type="button">Buy 1 seed</button>
-              <button id="buySeed5Btn" class="btn" type="button">Buy 5 seeds</button>
-              <button id="buySeed10Btn" class="btn" type="button">Buy 10 seeds</button>
+              <div class="seedActions__btns">
+                <button id="buySeedBtn" class="btn btn--primary" type="button">Buy 1</button>
+                <button id="buySeed5Btn" class="btn" type="button">Buy 5</button>
+                <button id="buySeed10Btn" class="btn" type="button">Buy 10</button>
+              </div>
               <div class="small" id="seedInfo"></div>
             </div>
 
@@ -71,10 +106,10 @@
             <div class="card__title">Weather Machine</div>
             <div class="weatherMachineRow" role="group" aria-label="Set tomorrow weather">
               <button id="weatherMachineSunBtn" class="btn btn--weather" type="button">
-                ☀️ Sun
+                ☀️ <span class="text--sun">Sun</span>
               </button>
               <button id="weatherMachineRainBtn" class="btn btn--weather" type="button">
-                🌧️ Rain
+                🌧️ <span class="text--rain">Rain</span>
               </button>
             </div>
             <div class="small" id="weatherMachineInfo">Tomorrow: ☀️ Sun</div>
@@ -95,43 +130,19 @@
           </div>
 
           <div class="card">
-            <div class="card__title">Save / Load (CSV)</div>
-            <div class="shopRow">
-              <div class="label">Save</div>
-              <button id="saveCsvBtn" class="btn btn--primary" type="button">Download CSV</button>
-            </div>
-            <div class="shopRow">
-              <div class="label">Load</div>
-              <div class="loadRow">
-                <input id="loadCsvInput" class="fileInput" type="file" accept=".csv" />
-                <button id="loadCsvBtn" class="btn" type="button">Upload</button>
+            <div class="card__title">Legend</div>
+            <div class="legend" aria-label="Controls">
+              <div class="legend__row"><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> Move</div>
+              <div class="legend__row"><span class="kbd">Space</span> Plant</div>
+              <div class="legend__row"><span class="kbd">E</span> Harvest</div>
+              <div class="legend__hintPanel">
+                Keys: <b>1</b>=Carrot, <b>2</b>=Onion, <b>3</b>=Cabbage, <b>4</b>=Watercress, <b>5</b>=Cactus Fruit
               </div>
+              <div class="legend__row"><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span><span class="kbd">5</span> Select seed</div>
+              <div class="legend__row"><span class="kbd">B</span> Buy 1</div>
+              <div class="legend__row"><span class="kbd">N</span> Buy 5</div>
+              <div class="legend__row"><span class="kbd">M</span> Buy 10</div>
             </div>
-            <div class="small" id="saveLoadStatus"></div>
-          </div>
-
-          <div class="card">
-            <div class="card__title">Background Music</div>
-            <div class="musicControls">
-              <button id="musicPlayBtn" class="btn btn--primary" type="button">Play</button>
-              <button id="musicPauseBtn" class="btn" type="button">Pause</button>
-              <button id="musicMuteBtn" class="btn" type="button">Mute</button>
-            </div>
-            <div class="musicVolumeRow">
-              <div class="label">Volume</div>
-              <input id="musicVolume" class="musicVolume" type="range" min="0" max="100" step="1" value="10" />
-              <div class="small" id="musicVolumeValue">10%</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card__title">How it works</div>
-            <ul class="list">
-              <li>Outer ring is a <b>path</b>; the inner 12×12 is <b>field</b>.</li>
-              <li>The field starts empty; buy seeds, then plant.</li>
-              <li>Weather changes each day and multiplies growth.</li>
-              <li>Planting consumes a seed; harvesting earns money.</li>
-            </ul>
           </div>
         </aside>
       </main>
@@ -139,12 +150,38 @@
 
     <audio
       id="bgm"
-      src="./Cozy%20Field%20Sunrise.mp3"
+      src="./assets/audio/Music%20-%20Day%2001.mp3"
+      preload="auto"
+      autoplay
+      loop
+      aria-hidden="true"
+    ></audio>
+    <audio
+      id="rainSfx"
+      src="./assets/audio/Music%20Effects%20-%20Rain.mp3"
       preload="auto"
       loop
       aria-hidden="true"
     ></audio>
+    <audio
+      id="sunnySfx"
+      src="./assets/audio/Music%20Effects%20-%20Sunny.mp3"
+      preload="auto"
+      loop
+      aria-hidden="true"
+    ></audio>
+    <audio
+      id="roosterSfx"
+      src="./assets/audio/Music%20Effects%20-%20Cockadoodledoo.mp3"
+      preload="auto"
+      aria-hidden="true"
+    ></audio>
 
-    <script src="./game.js"></script>
+    <script src="./js/constants.js"></script>
+    <script src="./js/game-mechanics.js"></script>
+    <script src="./js/game-state.js"></script>
+    <script src="./js/audio.js"></script>
+    <script src="./js/game-ui.js"></script>
+    <script src="./js/main.js"></script>
   </body>
 </html>
