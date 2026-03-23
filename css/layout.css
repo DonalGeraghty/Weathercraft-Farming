@@ -5,7 +5,7 @@
  * regions:
  *   .header       — title block + HUD row (Day, Time, Weather, Money, Pause)
  *   .panel--left  — How to Play, Music, Save / Load
- *   .gameWrap     — playfield (#grid) only
+ *   .game-wrap    — playfield (#grid) only
  *   .panel--right — Seed Shop, Weather Machine, Legend
  */
 
@@ -59,7 +59,7 @@
     overscroll-behavior: contain;
   }
 
-  .gameWrap {
+  .game-wrap {
     height: 100%;
     min-height: 0;
   }
@@ -69,7 +69,7 @@
   grid-area: left;
 }
 
-.gameWrap {
+.game-wrap {
   grid-area: center;
 }
 
@@ -117,7 +117,7 @@
     overflow: visible;
   }
 
-  .gameWrap {
+  .game-wrap {
     height: auto;
   }
 }

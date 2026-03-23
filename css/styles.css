@@ -5,10 +5,10 @@
   --panel: rgba(255,255,255,0.06);
   --text: rgba(255,255,255,0.92);
   --muted: rgba(255,255,255,0.72);
-  --gridLine: rgba(255,255,255,0.08);
+  --grid-line: rgba(255,255,255,0.08);
   --path: #2a2f3e;
   --field: #2a4a2d;
-  --field2: #2f5634;
+  --field-alt: #2f5634;
   --focus: #8bd3ff;
   --accent: #62d36f;
   --danger: #ff6b6b;
@@ -69,7 +69,6 @@ body{
   background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.05));
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 14px;
-  backdrop-filter: blur(8px);
 }
 
 .title__name{
@@ -114,7 +113,7 @@ body{
   min-width: 100px;
   text-align: center;
 }
-.pauseBtn{
+.pause-btn{
   width: 100%;
 }
 .hud__weather{
@@ -122,13 +121,13 @@ body{
   align-items: center;
   gap: 6px;
 }
-.weatherIcon{
+.weather-icon{
   font-size: 14px;
   line-height: 1;
   transform: translateY(1px);
 }
 
-.gameWrap{
+.game-wrap{
   position: relative;
   background: var(--panel);
   border: 1px solid rgba(255,255,255,0.10);
@@ -140,11 +139,11 @@ body{
   flex-direction: column;
   /* Sunny field palette; rain overrides below. */
   --field: #3a5f2a;
-  --field2: #3f6a32;
+  --field-alt: #3f6a32;
 }
 
 /* Fills the farm card; size query drives the square grid. */
-.gridViewportWrap{
+.grid-viewport-wrap{
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
@@ -155,8 +154,8 @@ body{
   container-name: game-viewport;
 }
 
-/* Square farm: fit inside .gridViewportWrap (viewport minus header, chrome). */
-.gridViewport{
+/* Square farm: fit inside .grid-viewport-wrap (viewport minus header, chrome). */
+.grid-viewport{
   width: min(100%, min(calc(100vw - 36px), calc(100dvh - 340px)));
   aspect-ratio: 1 / 1;
   max-width: 100%;
@@ -164,20 +163,20 @@ body{
   margin: 0 auto;
 }
 @supports (width: 1cqw){
-  .gridViewport{
+  .grid-viewport{
     width: min(100%, min(100cqw, 100cqh));
   }
 }
 @supports not (height: 100dvh){
-  .gridViewport{
+  .grid-viewport{
     width: min(100%, min(calc(100vw - 36px), calc(100vh - 340px)));
   }
 }
 
-.gameWrap.weather--rain{
+.game-wrap.weather--rain{
   /* Keep it green (not blue). Waterlogged tiles handle the blue overlay. */
   --field: #2c4a26;
-  --field2: #2f552a;
+  --field-alt: #2f552a;
 }
 
 .grid{
@@ -198,7 +197,7 @@ body{
   min-width: 0;
   min-height: 0;
   border-radius: 22%;
-  border: 1px solid var(--gridLine);
+  border: 1px solid var(--grid-line);
   overflow: hidden;
 }
 .tile--path{
@@ -216,7 +215,7 @@ body{
   background:
     radial-gradient(16px 14px at 30% 20%, rgba(255,255,255,0.06), transparent 60%),
     linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.10)),
-    var(--field2);
+    var(--field-alt);
 }
 .tile--highlight{
   box-shadow: 0 0 0 2px rgba(139,211,255,0.6) inset;
@@ -329,13 +328,13 @@ body{
   border: 1px solid rgba(255,255,255,0.10);
   overflow: hidden;
 }
-.crop__barFill{
+.crop__bar-fill{
   height: 100%;
   width: 0%;
   background: linear-gradient(90deg, rgba(98,211,111,0.95), rgba(139,211,255,0.95));
 }
 
-.harvestReady{
+.harvest-ready{
   position: absolute;
   top: 9.09%;
   right: 9.09%;
@@ -360,7 +359,6 @@ body{
   display: grid;
   place-items: center;
   font-size: clamp(12px, 4vmin, 18px);
-  filter: drop-shadow(0 8px 10px rgba(0,0,0,0.35));
   z-index: 2;
 }
 
@@ -388,7 +386,7 @@ body{
   align-items: center;
   gap: 8px;
 }
-.legend__hintPanel{
+.legend__hint-panel{
   width: 100%;
   color: var(--muted);
   font-size: 12px;
@@ -400,31 +398,31 @@ body{
   border-radius: 10px;
 }
 
-.seedActions{
+.seed-actions{
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-top: 10px;
 }
-.seedActions__btns{
+.seed-actions__btns{
   display: flex;
   gap: 8px;
 }
-.seedActions__btns .btn{
+.seed-actions__btns .btn{
   flex: 1;
   min-width: 0;
   padding: 10px 4px;
   font-size: 13px;
 }
 
-.inventoryGrid {
+.inventory-grid {
   display: flex;
   gap: 8px;
   margin-top: 16px;
   flex-wrap: nowrap;
 }
 
-.inventoryItem {
+.inventory-item {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -439,14 +437,14 @@ body{
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.inventoryItem:hover {
+.inventory-item:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(139, 211, 255, 0.5);
   transform: translateY(-4px) scale(1.05);
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
-.inventoryItem--selected {
+.inventory-item--selected {
   background: rgba(139, 211, 255, 0.14) !important;
   border-color: rgba(139, 211, 255, 0.62) !important;
   box-shadow: 
@@ -455,18 +453,18 @@ body{
   transform: translateY(-2px);
 }
 
-.inventoryItem--selected:hover {
+.inventory-item--selected:hover {
   transform: translateY(-4px) scale(1.05);
 }
 
-.inventoryItem__img {
+.inventory-item__img {
   width: 32px;
   height: 32px;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
-.inventoryItem__count {
+.inventory-item__count {
   font-family: 'Pixelify Sans', cursive;
   font-size: 16px;
   font-weight: 700;
@@ -502,7 +500,7 @@ body{
   letter-spacing: 0.5px;
   margin-bottom: 10px;
 }
-.shopRow{
+.shop-row{
   display: grid;
   grid-template-columns: 56px 1fr;
   gap: 10px;
@@ -510,7 +508,7 @@ body{
   margin-top: 10px;
 }
 
-.weatherMachineRow{
+.weather-machine-row{
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -541,14 +539,14 @@ body{
   transition: all 0.05s;
 }
 
-.loadRow{
+.load-row{
   display: flex;
   gap: 10px;
   align-items: center;
   min-width: 0;
   flex-wrap: wrap; /* allow wrapping instead of overflowing on tight screens */
 }
-.fileInput{
+.file-input{
   flex: 1;
   background: #0f1630;
   color: var(--text);
@@ -559,17 +557,17 @@ body{
 }
 
 @media (max-width: 420px){
-  .shopRow{
+  .shop-row{
     grid-template-columns: 52px 1fr;
   }
-  .fileInput{
+  .file-input{
     padding: 8px 8px;
     font-size: 12px;
   }
 }
 
 @media (max-width: 360px){
-  .loadRow{
+  .load-row{
     flex-direction: column;
     align-items: stretch;
   }
@@ -631,7 +629,7 @@ body{
   line-height: 1.6;
 }
 
-.musicControls{
+.music-controls{
   display: flex;
   gap: 10px;
   align-items: center;
@@ -639,11 +637,11 @@ body{
   flex-wrap: wrap;
 }
 
-.musicControls .btn{
+.music-controls .btn{
   min-width: 92px;
 }
 
-.musicVolumeRow{
+.music-volume-row{
   display: grid;
   grid-template-columns: 56px 1fr auto;
   gap: 10px;
@@ -651,24 +649,23 @@ body{
   margin-top: 12px;
 }
 
-.musicVolume{
+.music-volume{
   width: 100%;
 }
 
 /* Weather Machine Icon Pulse */
-.weatherMachineIcon--map {
+.weather-machine-icon--map {
   animation: machine-pulse 3s infinite ease-in-out;
-  filter: drop-shadow(0 0 4px rgba(139, 211, 255, 0.4));
 }
 
 @keyframes machine-pulse {
-  0% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 4px rgba(139, 211, 255, 0.4)); }
-  50% { transform: scale(1.05) translateY(-2%); filter: drop-shadow(0 0 8px rgba(255, 220, 80, 0.6)); }
-  100% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 4px rgba(139, 211, 255, 0.4)); }
+  0% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.05) translateY(-2%); }
+  100% { transform: scale(1) translateY(0); }
 }
 
 /* Shop Icon Swaying */
-.shopIcon--map {
+.shop-icon--map {
   transform-origin: 50% 87.5%; /* Correct anchor for the base at y=14 in the 16x16 SVG. */
   animation: shop-sway 5.7s infinite ease-in-out;
 }

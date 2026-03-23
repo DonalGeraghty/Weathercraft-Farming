@@ -1,6 +1,14 @@
 const WORLD_SIZE = 14; // includes path ring
 const FIELD_SIZE = 12; // inner farm
 const MS_PER_DAY = 100_000; // 100 seconds (1.66 minutes) real time = 1 in-game day
+const PATH_MIN_X = 0;
+const PATH_MIN_Y = 0;
+const PATH_MAX_X = WORLD_SIZE - 1;
+const PATH_MAX_Y = WORLD_SIZE - 1;
+const SHOP_TILE_X = WORLD_SIZE - 1;
+const SHOP_TILE_Y = 0;
+const WEATHER_MACHINE_TILE_X = WORLD_SIZE - 1;
+const WEATHER_MACHINE_TILE_Y = WORLD_SIZE - 1;
 
 const CROPS = {
   carrot: {
@@ -69,4 +77,11 @@ const RAIN_SFX_MIX = 0.42;
 const SUN_SFX_MIX = 3.0; // Boosted heavily because the raw audio file is very quiet
 
 const SEED_KEY_ORDER = ["carrot", "onion", "cabbage", "watercress", "cactusfruit"];
+
+const ROOSTER_THRESHOLD_MS = (7 / 24) * MS_PER_DAY;
+const SUNRISE_TRANSITION_MS = 2000;
+const BGM_SWAP_CHECK_MS = 250;
+const BGM_FADE_LIMIT_MS = 5000;
+const HUD_UPDATE_COOLDOWN_MS = 150;
+const WEATHER_SPEND_UNIT_EUR = 10;
 
