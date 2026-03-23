@@ -1,5 +1,10 @@
+let bgmElCache = null;
+let rainElCache = null;
+let sunElCache = null;
+
 function getBgmBase() {
-  const bgm = document.getElementById("bgm");
+  if (!bgmElCache) bgmElCache = document.getElementById("bgm");
+  const bgm = bgmElCache;
   if (bgm && bgm.src) {
     // Determine the base volume by asking what track is actually playing right now.
     // This prevents the 3.0x multiplier jumping in instantly at 10pm while the day music is still fading out.
@@ -9,9 +14,12 @@ function getBgmBase() {
 }
 
 function syncWeatherAmbience() {
-  const rain = document.getElementById("rainSfx");
-  const sun = document.getElementById("sunnySfx");
-  const bgm = document.getElementById("bgm");
+  if (!bgmElCache) bgmElCache = document.getElementById("bgm");
+  if (!rainElCache) rainElCache = document.getElementById("rainSfx");
+  if (!sunElCache) sunElCache = document.getElementById("sunnySfx");
+  const bgm = bgmElCache;
+  const rain = rainElCache;
+  const sun = sunElCache;
   if (!rain || !sun || !bgm) return;
 
   const wantRain = state.weatherId === "rain";

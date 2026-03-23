@@ -12,7 +12,7 @@
       <header class="header">
         <div class="title">
           <div class="title__name">Weathercraft Farming</div>
-          <div class="title__hint">5 minutes = 1 day · Weather affects growth</div>
+          <div class="title__hint"><span id="dayLengthMinutes">5</span> minutes = 1 day · Weather affects growth</div>
         </div>
         <div class="hud" aria-label="Game status">
           <div class="hud__item"><span class="hud__label">Day</span> <span id="dayValue">1</span></div>
@@ -97,9 +97,7 @@
               <div class="small" id="seedInfo"></div>
             </div>
 
-            <div class="seedInventory small">
-              Inventory: <span id="inventoryValue">—</span>
-            </div>
+            <div id="inventoryGrid" class="inventoryGrid"></div>
           </div>
 
           <div class="card">
@@ -113,20 +111,6 @@
               </button>
             </div>
             <div class="small" id="weatherMachineInfo">Tomorrow: ☀️ Sun</div>
-            <div class="shopRow">
-              <div class="label">Spend €</div>
-              <div class="loadRow">
-                <input
-                  id="weatherMachineSpendInput"
-                  class="fileInput"
-                  type="number"
-                  min="0"
-                  step="10"
-                  value="0"
-                />
-                <button id="weatherMachineSpendBtn" class="btn btn--primary" type="button">Pay</button>
-              </div>
-            </div>
           </div>
 
           <div class="card">
@@ -183,5 +167,6 @@
     <script src="./js/audio.js"></script>
     <script src="./js/game-ui.js"></script>
     <script src="./js/main.js"></script>
+    <script src="./js/performance-test.js"></script>
   </body>
 </html>

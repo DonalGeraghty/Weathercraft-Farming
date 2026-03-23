@@ -11,7 +11,7 @@ const state = {
     onion: 0,
     cabbage: 0,
     watercress: 0,
-    cactusFruit: 0,
+    cactusfruit: 0,
   },
   farmer: { x: 0, y: 0 }, // path tile
   tiles: [],
@@ -19,6 +19,8 @@ const state = {
   roosterPlayedToday: true,
   bgmFadeState: "idle",
   bgmFadeTimerMs: 0,
+  sunriseTransition: false,
+  sunriseTransitionMsRemaining: 0,
 };
 
 function createInitialTiles() {
@@ -36,6 +38,8 @@ function createInitialTiles() {
         // - if a ready crop isn't harvested within 1 in-game day => crop disappears and tile turns black for 1 day
         blackMsRemaining: 0,
         readyRotMsRemaining: 0,
+        isAdjacentToWater: false,
+        dirty: true,
       });
     }
   }
@@ -59,7 +63,7 @@ function exportStateToCsv() {
       state.inventory.onion ?? 0,
       state.inventory.cabbage ?? 0,
       state.inventory.watercress ?? 0,
-      state.inventory.cactusFruit ?? 0,
+      state.inventory.cactusfruit ?? 0,
       state.weatherMachineSpendCommitted ?? 0,
       state.paused ? 1 : 0,
     ].join(","),
@@ -124,7 +128,7 @@ function importStateFromCsv(csvText) {
     invOnion,
     invCabbage,
     invWatercress,
-    invCactusFruit,
+    invCactusfruit,
     metaWeatherSpend,
     metaPaused,
   ] = meta;
@@ -141,7 +145,7 @@ function importStateFromCsv(csvText) {
   state.inventory.onion = Number(invOnion) || 0;
   state.inventory.cabbage = Number(invCabbage) || 0;
   state.inventory.watercress = legacyV1 ? 0 : Number(invWatercress) || 0;
-  state.inventory.cactusFruit = legacyV1 ? 0 : Number(invCactusFruit) || 0;
+  state.inventory.cactusfruit = legacyV1 ? 0 : Number(invCactusfruit) || 0;
   state.weatherMachineSpendCommitted =
     csvVersion === "WeathercraftFarmingCSV,3" ? Math.max(0, Number(metaWeatherSpend) || 0) : 0;
   state.paused =
@@ -212,7 +216,7 @@ function importStateFromCsv(csvText) {
     }
 
     // Scorched kills all crops except cactus fruit.
-    if (scorched && cropId !== "cactusFruit") {
+    if (scorched && cropId !== "cactusfruit") {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
       continue;
@@ -236,6 +240,7 @@ function importStateFromCsv(csvText) {
   state.roosterPlayedToday = state.msIntoDay >= (7 / 24) * MS_PER_DAY;
 
   setWeatherTheme();
+  updateWaterAdjacency();
   updateWeatherMachineUi();
   updateHud();
   updateShopInfo();
