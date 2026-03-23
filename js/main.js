@@ -8,32 +8,44 @@ function init() {
   setWeatherTheme();
   renderAll();
   updateHighlights();
+  updateWaterAdjacency();
   startLoop();
 }
+
+let bgmElMain, roosterElMain, musicVolElMain;
 
 function startLoop() {
   let lastFrameTime = performance.now();
 
-  // Fixed-rate simulation + throttled rendering to reduce CPU.
-  // The game state changes slowly (day ~= 5 real minutes), so 15-20 FPS is enough.
-  const LOOP_INTERVAL_MS = 50; // ~20 ticks + renders/sec
+  // Target 60 FPS for smoothness while capping CPU on high-refresh monitors.
+  const TARGET_FPS = 60;
+  const FRAME_MIN_TIME_MS = 1000 / TARGET_FPS;
   let simAccumulator = 0;
-  let lastRenderTime = 0;
 
   function frame(now) {
     const deltaMs = now - lastFrameTime;
+
+    // Skip frame if we are ahead of our TARGET_FPS interval.
+    if (deltaMs < FRAME_MIN_TIME_MS) {
+      requestAnimationFrame(frame);
+      return;
+    }
+
     lastFrameTime = now;
 
     if (!state.paused) {
       simAccumulator += deltaMs;
-      // Cap simulation work: if the tab was backgrounded, catch up in fixed steps.
-      while (simAccumulator >= LOOP_INTERVAL_MS) {
-        tick(LOOP_INTERVAL_MS);
-        simAccumulator -= LOOP_INTERVAL_MS;
+      
+      let ticksPerformed = 0;
+      // Fixed-step simulation: catch up if needed, but throttle to FRAME_MIN_TIME_MS steps.
+      while (simAccumulator >= FRAME_MIN_TIME_MS) {
+        tick(FRAME_MIN_TIME_MS);
+        simAccumulator -= FRAME_MIN_TIME_MS;
+        ticksPerformed++;
       }
 
-      if (now - lastRenderTime >= LOOP_INTERVAL_MS) {
-        lastRenderTime = now;
+      // Render the result.
+      if (ticksPerformed > 0) {
         updateHud();
         renderAll();
       }
@@ -54,10 +66,12 @@ function tick(dtMs) {
       state.sunriseTransitionMsRemaining = 0;
       state.sunriseTransition = false;
       updateShopInfo(); // Re-enable shop buttons and update UI feedback
+      updateWeatherMachineUi();
     }
   }
 
-  const bgm = document.getElementById("bgm");
+  if (!bgmElMain) bgmElMain = document.getElementById("bgm");
+  const bgm = bgmElMain;
   if (bgm) {
     const wantNightSrc = isNighttime();
     const hasNightSrc = bgm.src.includes("Night");
@@ -95,7 +109,8 @@ function tick(dtMs) {
       }
     }
 
-    const musicVolumeInput = document.getElementById("musicVolume");
+    if (!musicVolElMain) musicVolElMain = document.getElementById("musicVolume");
+    const musicVolumeInput = musicVolElMain;
     const volumePercent = musicVolumeInput ? (Number(musicVolumeInput.value) || 0) : 10;
     bgm.volume = clamp01((volumePercent / 100) * getBgmBase() * fadeMultiplier);
   }
@@ -107,7 +122,8 @@ function tick(dtMs) {
     state.sunriseTransition = true;
     state.sunriseTransitionMsRemaining = 2000;
 
-    const rooster = document.getElementById("roosterSfx");
+    if (!roosterElMain) roosterElMain = document.getElementById("roosterSfx");
+    const rooster = roosterElMain;
     if (rooster && bgm) {
       rooster.volume = clamp01(bgm.volume * 0.8);
       rooster.play().catch(() => {});
@@ -126,6 +142,8 @@ function tick(dtMs) {
     } else {
       addScorchedCells(isSwap ? 3 : 5);
     }
+
+    updateWaterAdjacency();
 
     enforceHazardPlantValidity();
     setWeatherTheme();

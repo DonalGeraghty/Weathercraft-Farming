@@ -38,6 +38,7 @@ function createInitialTiles() {
         // - if a ready crop isn't harvested within 1 in-game day => crop disappears and tile turns black for 1 day
         blackMsRemaining: 0,
         readyRotMsRemaining: 0,
+        isAdjacentToWater: false,
         dirty: true,
       });
     }
@@ -239,6 +240,7 @@ function importStateFromCsv(csvText) {
   state.roosterPlayedToday = state.msIntoDay >= (7 / 24) * MS_PER_DAY;
 
   setWeatherTheme();
+  updateWaterAdjacency();
   updateWeatherMachineUi();
   updateHud();
   updateShopInfo();

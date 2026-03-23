@@ -17,9 +17,26 @@
   --sun: #ffdc50;
   --rain: #8bd3ff;
 
+  /* Hazard Colors */
+  --waterlogged-grad: linear-gradient(180deg, #0a2d7c, #05183d);
+  --scorched-grad: linear-gradient(180deg, #c58a00, #6b3f00);
+  --waterlogged-border: rgba(120,200,255,0.70);
+  --scorched-border: rgba(255,230,120,0.75);
+
+  /* Crop Sizes */
+  --size-seed: 31.82%;
+  --size-sprout: 54.55%;
+  --size-grown: 77.27%;
+  --size-cactus-seed: 40.91%;
+  --size-cactus-sprout: 63.64%;
+  --size-cactus-grown: 95.45%;
+
   /* Fonts */
   --font-base: "Zilla Slab", "Courier New", Courier, monospace;
 }
+
+/* Global Pixel Rendering */
+img, .tile--path { image-rendering: pixelated; }
 
 .text--sun { color: var(--sun); }
 .text--rain { color: var(--rain); }
@@ -185,7 +202,9 @@ body{
   overflow: hidden;
 }
 .tile--path{
-  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.08)), var(--path);
+  background-color: var(--path);
+  background-size: cover;
+  image-rendering: pixelated;
 }
 .tile--field{
   background:
@@ -203,33 +222,25 @@ body{
   box-shadow: 0 0 0 2px rgba(139,211,255,0.6) inset;
 }
 
-.tile--waterlogged{
-  /* Ensure the underlying field background never shows through. */
+.tile--waterlogged,
+.tile--scorched {
   background: transparent !important;
-  border-color: rgba(120,200,255,0.70);
 }
-.tile--waterlogged::before{
+
+.tile--waterlogged { border-color: var(--waterlogged-border); }
+.tile--scorched { border-color: var(--scorched-border); }
+
+.tile--waterlogged::before,
+.tile--scorched::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, #0a2d7c, #05183d);
   z-index: 1;
   pointer-events: none;
 }
 
-.tile--scorched{
-  /* Ensure the underlying field background never shows through. */
-  background: transparent !important;
-  border-color: rgba(255,230,120,0.75);
-}
-.tile--scorched::before{
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, #c58a00, #6b3f00);
-  z-index: 1;
-  pointer-events: none;
-}
+.tile--waterlogged::before { background: var(--waterlogged-grad); }
+.tile--scorched::before { background: var(--scorched-grad); }
 
 .tile--black{
   /* Solid black for rotted tiles (no crop planting allowed while active). */
@@ -252,35 +263,33 @@ body{
   background: transparent;
   z-index: 2;
 }
-.crop[data-stage="seed"]{
-  width: 31.82%;
-  height: 31.82%;
+.crop[data-stage="seed"] {
+  width: var(--size-seed);
+  height: var(--size-seed);
   border-radius: 999px;
   background: rgba(255,255,255,0.18);
 }
-.crop[data-stage="sprout"]{
-  width: 54.55%;
-  height: 54.55%;
+.crop[data-stage="sprout"] {
+  width: var(--size-sprout);
+  height: var(--size-sprout);
   border-radius: 22.7%;
 }
-.crop[data-stage="grown"]{
-  width: 77.27%;
-  height: 77.27%;
+.crop[data-stage="grown"] {
+  width: var(--size-grown);
+  height: var(--size-grown);
   border-radius: 27.3%;
 }
-.crop[data-crop="cactusfruit"][data-stage="seed"]{
-  width: 40.91%;
-  height: 40.91%;
-  border-radius: 999px;
+.crop[data-crop="cactusfruit"][data-stage="seed"] {
+  width: var(--size-cactus-seed);
+  height: var(--size-cactus-seed);
 }
-.crop[data-crop="cactusfruit"][data-stage="sprout"]{
-  width: 63.64%;
-  height: 63.64%;
-  border-radius: 27.3%;
+.crop[data-crop="cactusfruit"][data-stage="sprout"] {
+  width: var(--size-cactus-sprout);
+  height: var(--size-cactus-sprout);
 }
-.crop[data-crop="cactusfruit"][data-stage="grown"]{
-  width: 95.45%;
-  height: 95.45%;
+.crop[data-crop="cactusfruit"][data-stage="grown"] {
+  width: var(--size-cactus-grown);
+  height: var(--size-cactus-grown);
   border-radius: 31.8%;
 }
 
@@ -306,7 +315,6 @@ body{
   height: 100%;
   display: block;
   object-fit: contain;
-  image-rendering: pixelated;
   pointer-events: none;
 }
 .crop__bar{
@@ -360,7 +368,6 @@ body{
   width: clamp(16px, 59.09%, 40px);
   height: clamp(16px, 59.09%, 40px);
   display: block;
-  image-rendering: pixelated;
   pointer-events: none;
 }
 
@@ -456,7 +463,6 @@ body{
   width: 32px;
   height: 32px;
   object-fit: contain;
-  image-rendering: pixelated;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
@@ -512,10 +518,27 @@ body{
 }
 .btn--weather{
   background: rgba(255,255,255,0.06);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.btn--weather:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(139, 211, 255, 0.5);
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 .btn--weather.btn--active{
   background: linear-gradient(180deg, rgba(139,211,255,0.25), rgba(98,211,111,0.12));
   border-color: rgba(139,211,255,0.42);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.btn--weather.btn--active:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(139,211,255,0.25);
+}
+.btn--weather:active, .btn--weather.btn--active:active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: all 0.05s;
 }
 
 .loadRow{
@@ -630,4 +653,28 @@ body{
 
 .musicVolume{
   width: 100%;
+}
+
+/* Weather Machine Icon Pulse */
+.weatherMachineIcon--map {
+  animation: machine-pulse 3s infinite ease-in-out;
+  filter: drop-shadow(0 0 4px rgba(139, 211, 255, 0.4));
+}
+
+@keyframes machine-pulse {
+  0% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 4px rgba(139, 211, 255, 0.4)); }
+  50% { transform: scale(1.05) translateY(-2%); filter: drop-shadow(0 0 8px rgba(255, 220, 80, 0.6)); }
+  100% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 4px rgba(139, 211, 255, 0.4)); }
+}
+
+/* Shop Icon Swaying */
+.shopIcon--map {
+  transform-origin: 50% 87.5%; /* Correct anchor for the base at y=14 in the 16x16 SVG. */
+  animation: shop-sway 5.7s infinite ease-in-out;
+}
+
+@keyframes shop-sway {
+  0% { transform: skewX(-7.5deg); }
+  50% { transform: skewX(7.5deg); }
+  100% { transform: skewX(-7.5deg); }
 }

@@ -121,6 +121,16 @@ function isAdjacentToWaterlogged(x, y) {
   return false;
 }
 
+function updateWaterAdjacency() {
+  for (let idx = 0; idx < state.tiles.length; idx++) {
+    const tile = state.tiles[idx];
+    if (tile.kind !== "field") continue;
+    const x = idx % WORLD_SIZE;
+    const y = Math.floor(idx / WORLD_SIZE);
+    tile.isAdjacentToWater = isAdjacentToWaterlogged(x, y);
+  }
+}
+
 /** A field tile may be waterlogged or scorched, never both; waterlogged wins if a save had both. */
 function reconcileExclusiveHazards(tile) {
   if (!tile || tile.kind !== "field") return;
@@ -270,7 +280,7 @@ function growAllCrops(dtMs) {
     // Environment effects (waterlogged adjacency / scorched on-tile).
     let envMult = 1;
     if (cropDef.adjacentWaterloggedGrowthMultiplier) {
-      if (isAdjacentToWaterlogged(x, y)) {
+      if (tile.isAdjacentToWater) {
         envMult *= cropDef.adjacentWaterloggedGrowthMultiplier;
       }
     }
@@ -278,9 +288,20 @@ function growAllCrops(dtMs) {
       if (tile.scorched) envMult *= cropDef.scorchedGrowthMultiplier;
     }
 
+    const oldProgress = tile.crop.progress;
+    const oldStage = cropStage(oldProgress);
+    const oldPercent = Math.floor(oldProgress * 100);
+
     const dProgress = growthPerDay * globalMultiplier * cropWeatherMult * envMult * growthThisTick;
-    tile.crop.progress = clamp01(tile.crop.progress + dProgress);
-    tile.dirty = true; // Always mark dirty during growth as progress percent usually changes each frame.
+    const newProgress = clamp01(oldProgress + dProgress);
+    tile.crop.progress = newProgress;
+
+    const newStage = cropStage(newProgress);
+    const newPercent = Math.floor(newProgress * 100);
+
+    if (newStage !== oldStage || newPercent !== oldPercent) {
+      tile.dirty = true;
+    }
   }
 }
 
@@ -290,9 +311,10 @@ function updateRotAndBlack(dtMs) {
 
     // Black tiles count down and block planting.
     if (tile.blackMsRemaining > 0) {
+      const oldVal = tile.blackMsRemaining;
       tile.blackMsRemaining -= dtMs;
       if (tile.blackMsRemaining < 0) tile.blackMsRemaining = 0;
-      tile.dirty = true;
+      if (tile.blackMsRemaining === 0 && oldVal > 0) tile.dirty = true;
 
       // If a tile is black, it should never contain a crop.
       if (tile.crop) {
