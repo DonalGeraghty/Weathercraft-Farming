@@ -12,21 +12,21 @@
       <header class="header">
         <div class="title">
           <div class="title__name">Weathercraft Farming</div>
-          <div class="title__hint"><span id="dayLengthMinutes">5</span> minutes = 1 day · Weather affects growth</div>
+          <div class="title__hint"><span id="day-length-minutes">5</span> minutes = 1 day · Weather affects growth</div>
         </div>
         <div class="hud" aria-label="Game status">
-          <div class="hud__item"><span class="hud__label">Day</span> <span id="dayValue">1</span></div>
-          <div class="hud__item"><span class="hud__label">Time</span> <span id="timeValue">12 AM</span></div>
+          <div class="hud__item"><span class="hud__label">Day</span> <span id="day-value">1</span></div>
+          <div class="hud__item"><span class="hud__label">Time</span> <span id="time-value">12 AM</span></div>
           <div class="hud__item">
             <span class="hud__label">Weather</span>
             <span class="hud__weather">
-              <span id="weatherIcon" class="weatherIcon" aria-hidden="true">☀️</span>
-              <span id="weatherValue">Sun</span>
+              <span id="weather-icon" class="weather-icon" aria-hidden="true">☀️</span>
+              <span id="weather-value">Sun</span>
             </span>
           </div>
-          <div class="hud__item"><span class="hud__label">Money</span> €<span id="moneyValue">0</span></div>
+          <div class="hud__item"><span class="hud__label">Money</span> €<span id="money-value">0</span></div>
           <div class="hud__item hud__item--btn">
-            <button id="pauseBtn" class="btn pauseBtn" type="button">Pause</button>
+            <button id="pause-btn" class="btn pause-btn" type="button">Pause</button>
           </div>
         </div>
       </header>
@@ -45,37 +45,37 @@
 
           <div class="card">
             <div class="card__title">Background Music</div>
-            <div class="musicControls">
-              <button id="musicPlayBtn" class="btn btn--primary" type="button">Play</button>
-              <button id="musicPauseBtn" class="btn" type="button">Pause</button>
+            <div class="music-controls">
+              <button id="music-play-btn" class="btn btn--primary" type="button">Play</button>
+              <button id="music-pause-btn" class="btn" type="button">Pause</button>
             </div>
-            <div class="musicVolumeRow">
+            <div class="music-volume-row">
               <div class="label">Volume</div>
-              <input id="musicVolume" class="musicVolume" type="range" min="0" max="100" step="1" value="10" />
-              <div class="small" id="musicVolumeValue">10%</div>
+              <input id="music-volume" class="music-volume" type="range" min="0" max="100" step="1" value="10" />
+              <div class="small" id="music-volume-value">10%</div>
             </div>
           </div>
 
           <div class="card">
             <div class="card__title">Save / Load (CSV)</div>
-            <div class="shopRow">
+            <div class="shop-row">
               <div class="label">Save</div>
-              <button id="saveCsvBtn" class="btn btn--primary" type="button">Download CSV</button>
+              <button id="save-csv-btn" class="btn btn--primary" type="button">Download CSV</button>
             </div>
-            <div class="shopRow">
+            <div class="shop-row">
               <div class="label">Load</div>
-              <div class="loadRow">
-                <input id="loadCsvInput" class="fileInput" type="file" accept=".csv" />
-                <button id="loadCsvBtn" class="btn" type="button">Upload</button>
+              <div class="load-row">
+                <input id="load-csv-input" class="file-input" type="file" accept=".csv" />
+                <button id="load-csv-btn" class="btn" type="button">Upload</button>
               </div>
             </div>
-            <div class="small" id="saveLoadStatus"></div>
+            <div class="small" id="save-load-status"></div>
           </div>
         </aside>
 
-        <section class="gameWrap" aria-label="Farm view">
-          <div class="gridViewportWrap">
-            <div class="gridViewport">
+        <section class="game-wrap" aria-label="Farm view">
+          <div class="grid-viewport-wrap">
+            <div class="grid-viewport">
               <div id="grid" class="grid" role="grid" aria-label="Farm grid"></div>
             </div>
           </div>
@@ -84,33 +84,33 @@
         <aside class="panel panel--right" aria-label="Shop and weather">
           <div class="card">
             <div class="card__title">Seed Shop</div>
-            <div class="shopRow">
-              <label class="label" for="seedSelect">Seed</label>
-              <select id="seedSelect" class="select"></select>
+            <div class="shop-row">
+              <label class="label" for="seed-select">Seed</label>
+              <select id="seed-select" class="select"></select>
             </div>
-            <div class="seedActions">
-              <div class="seedActions__btns">
-                <button id="buySeedBtn" class="btn btn--primary" type="button">Buy 1</button>
-                <button id="buySeed5Btn" class="btn" type="button">Buy 5</button>
-                <button id="buySeed10Btn" class="btn" type="button">Buy 10</button>
+            <div class="seed-actions">
+              <div class="seed-actions__btns">
+                <button id="buy-seed-btn" class="btn btn--primary" type="button">Buy 1</button>
+                <button id="buy-seed-5-btn" class="btn" type="button">Buy 5</button>
+                <button id="buy-seed-10-btn" class="btn" type="button">Buy 10</button>
               </div>
-              <div class="small" id="seedInfo"></div>
+              <div class="small" id="seed-info"></div>
             </div>
 
-            <div id="inventoryGrid" class="inventoryGrid"></div>
+            <div id="inventory-grid" class="inventory-grid"></div>
           </div>
 
           <div class="card">
             <div class="card__title">Weather Machine</div>
-            <div class="weatherMachineRow" role="group" aria-label="Set tomorrow weather">
-              <button id="weatherMachineSunBtn" class="btn btn--weather" type="button">
+            <div class="weather-machine-row" role="group" aria-label="Set tomorrow weather">
+              <button id="weather-machine-sun-btn" class="btn btn--weather" type="button">
                 ☀️ <span class="text--sun">Sun</span>
               </button>
-              <button id="weatherMachineRainBtn" class="btn btn--weather" type="button">
+              <button id="weather-machine-rain-btn" class="btn btn--weather" type="button">
                 🌧️ <span class="text--rain">Rain</span>
               </button>
             </div>
-            <div class="small" id="weatherMachineInfo">Tomorrow: ☀️ Sun</div>
+            <div class="small" id="weather-machine-info">Tomorrow: ☀️ Sun</div>
           </div>
 
           <div class="card">
@@ -119,9 +119,6 @@
               <div class="legend__row"><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> Move</div>
               <div class="legend__row"><span class="kbd">Space</span> Plant</div>
               <div class="legend__row"><span class="kbd">E</span> Harvest</div>
-              <div class="legend__hintPanel">
-                Keys: <b>1</b>=Carrot, <b>2</b>=Onion, <b>3</b>=Cabbage, <b>4</b>=Watercress, <b>5</b>=Cactus Fruit
-              </div>
               <div class="legend__row"><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span><span class="kbd">5</span> Select seed</div>
               <div class="legend__row"><span class="kbd">B</span> Buy 1</div>
               <div class="legend__row"><span class="kbd">N</span> Buy 5</div>
@@ -134,29 +131,29 @@
 
     <audio
       id="bgm"
-      src="./assets/audio/Music%20-%20Day%2001.mp3"
+      src="./assets/audio/music-day-01.mp3"
       preload="auto"
       autoplay
       loop
       aria-hidden="true"
     ></audio>
     <audio
-      id="rainSfx"
-      src="./assets/audio/Music%20Effects%20-%20Rain.mp3"
+      id="rain-sfx"
+      src="./assets/audio/music-effects-rain.mp3"
       preload="auto"
       loop
       aria-hidden="true"
     ></audio>
     <audio
-      id="sunnySfx"
-      src="./assets/audio/Music%20Effects%20-%20Sunny.mp3"
+      id="sunny-sfx"
+      src="./assets/audio/music-effects-sunny.mp3"
       preload="auto"
       loop
       aria-hidden="true"
     ></audio>
     <audio
-      id="roosterSfx"
-      src="./assets/audio/Music%20Effects%20-%20Cockadoodledoo.mp3"
+      id="rooster-sfx"
+      src="./assets/audio/music-effects-cockadoodledoo.mp3"
       preload="auto"
       aria-hidden="true"
     ></audio>
@@ -164,9 +161,9 @@
     <script src="./js/constants.js"></script>
     <script src="./js/game-mechanics.js"></script>
     <script src="./js/game-state.js"></script>
+    <script src="./js/game-services.js"></script>
     <script src="./js/audio.js"></script>
     <script src="./js/game-ui.js"></script>
     <script src="./js/main.js"></script>
-    <script src="./js/performance-test.js"></script>
   </body>
 </html>

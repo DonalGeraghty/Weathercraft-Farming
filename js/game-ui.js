@@ -1,41 +1,81 @@
 // ---- DOM caching for fast rendering ----
 const TILE_COUNT = WORLD_SIZE * WORLD_SIZE;
-let tileEls = [];
-let cropEls = [];
+let tileElements = [];
+let cropElements = [];
 let cropLabels = [];
-let cropImgs = [];
-let cropBarFills = [];
-let harvestReadyEls = [];
-let farmerEl = null;
+let cropImageElements = [];
+let cropBarFillElements = [];
+let harvestReadyElements = [];
+let farmerElement = null;
 let lastFarmerIdx = null;
 let lastHighlightedIdx = null;
 let lastCropIdByIdx = new Array(TILE_COUNT).fill(null);
 let lastCropStageByIdx = new Array(TILE_COUNT).fill(null);
+let dirtyTileSet = new Set();
 
 // HUD element cache
-let hudDayEl, hudTimeEl, hudWeatherIconEl, hudWeatherValueEl, hudMoneyEl;
+let hudDayElement, hudTimeElement, hudWeatherIconElement, hudWeatherValueElement, hudMoneyElement;
 let lastHudDay, lastHudTime, lastHudWeatherId, lastHudIsNight, lastHudMoney;
+let weatherMachineSunButtonElement, weatherMachineRainButtonElement, weatherMachineInfoElement;
+let lastWeatherMachineInfoHtml = "";
+let shopSeedInfoElement, inventoryGridElement, buySeedButtonElement, buySeed5ButtonElement, buySeed10ButtonElement, seedSelectElementCache;
+let pauseButtonElement;
+let inventoryItemElements = {};
+let inventoryCountElements = {};
+let lastInventoryCounts = {};
+let lastSelectedSeedId = null;
+const uiDisposers = [];
+
+function addUiDisposer(disposeFn) {
+  if (typeof disposeFn !== "function") return;
+  uiDisposers.push(disposeFn);
+  if (typeof wfRegisterAppDisposer === "function") {
+    wfRegisterAppDisposer(disposeFn);
+  }
+}
+
+function disposeUi() {
+  while (uiDisposers.length) {
+    const disposeFn = uiDisposers.pop();
+    try {
+      disposeFn();
+    } catch (_) {}
+  }
+}
+window.disposeUi = disposeUi;
+
+function markTileDirty(idx) {
+  if (idx < 0 || idx >= TILE_COUNT) return;
+  dirtyTileSet.add(idx);
+  const tile = state.tiles[idx];
+  if (tile) tile.dirty = true;
+}
+
+function hasDirtyTiles() {
+  return dirtyTileSet.size > 0;
+}
 
 function setPaused(next) {
   state.paused = Boolean(next);
-  const pauseBtn = document.getElementById("pauseBtn");
-  if (pauseBtn) pauseBtn.textContent = state.paused ? "Resume" : "Pause";
+  const pauseButton = pauseButtonElement || document.getElementById("pause-btn");
+  if (pauseButton) pauseButton.textContent = state.paused ? "Resume" : "Pause";
 }
 
 function buildGridDom() {
   const gridEl = document.getElementById("grid");
   gridEl.innerHTML = "";
 
-  tileEls = new Array(TILE_COUNT);
-  cropEls = new Array(TILE_COUNT);
+  tileElements = new Array(TILE_COUNT);
+  cropElements = new Array(TILE_COUNT);
   cropLabels = new Array(TILE_COUNT);
-  cropImgs = new Array(TILE_COUNT);
-  cropBarFills = new Array(TILE_COUNT);
-  harvestReadyEls = new Array(TILE_COUNT);
+  cropImageElements = new Array(TILE_COUNT);
+  cropBarFillElements = new Array(TILE_COUNT);
+  harvestReadyElements = new Array(TILE_COUNT);
   lastFarmerIdx = null;
   lastHighlightedIdx = null;
   lastCropIdByIdx = new Array(TILE_COUNT).fill(null);
   lastCropStageByIdx = new Array(TILE_COUNT).fill(null);
+  dirtyTileSet = new Set();
 
   for (let y = 0; y < WORLD_SIZE; y++) {
     for (let x = 0; x < WORLD_SIZE; x++) {
@@ -48,21 +88,21 @@ function buildGridDom() {
       
       if (tile.kind === "path") {
         let suffix = "";
-        if (x === 0 && y === 0) suffix = "tl";
-        else if (x === 13 && y === 0) suffix = "tr";
-        else if (x === 0 && y === 13) suffix = "bl";
-        else if (x === 13 && y === 13) suffix = "br";
-        else if (x === 0 || x === 13) suffix = "v";
+        if (x === PATH_MIN_X && y === PATH_MIN_Y) suffix = "tl";
+        else if (x === PATH_MAX_X && y === PATH_MIN_Y) suffix = "tr";
+        else if (x === PATH_MIN_X && y === PATH_MAX_Y) suffix = "bl";
+        else if (x === PATH_MAX_X && y === PATH_MAX_Y) suffix = "br";
+        else if (x === PATH_MIN_X || x === PATH_MAX_X) suffix = "v";
         else suffix = "h";
 
         el.style.backgroundImage = `url('./assets/sprites/pixel-path-${suffix}.svg')`;
       }
       el.setAttribute("role", "gridcell");
       
-      if (x === 13 && y === 0) {
+      if (x === SHOP_TILE_X && y === SHOP_TILE_Y) {
         const shopIcon = document.createElement("img");
         shopIcon.src = "./assets/sprites/pixel-shop.svg";
-        shopIcon.className = "shopIcon--map"; // Swaying animation
+        shopIcon.className = "shop-icon--map"; // Swaying animation
         shopIcon.style.position = "absolute";
         shopIcon.style.inset = "5%";
         shopIcon.style.width = "90%";
@@ -72,10 +112,10 @@ function buildGridDom() {
         el.appendChild(shopIcon);
       }
 
-      if (x === 13 && y === 13) {
+      if (x === WEATHER_MACHINE_TILE_X && y === WEATHER_MACHINE_TILE_Y) {
         const weatherMachineIcon = document.createElement("img");
         weatherMachineIcon.src = "./assets/sprites/pixel-weather-machine.svg";
-        weatherMachineIcon.className = "weatherMachineIcon--map"; // Pulsing CSS animation
+        weatherMachineIcon.className = "weather-machine-icon--map"; // Pulsing CSS animation
         weatherMachineIcon.style.position = "absolute";
         weatherMachineIcon.style.inset = "5%";
         weatherMachineIcon.style.width = "90%";
@@ -86,7 +126,7 @@ function buildGridDom() {
       }
 
       gridEl.appendChild(el);
-      tileEls[idx] = el;
+      tileElements[idx] = el;
 
       if (tile.kind === "field") {
         // Pre-create crop UI (hidden unless the tile has a valid crop to show).
@@ -107,7 +147,7 @@ function buildGridDom() {
         const bar = document.createElement("div");
         bar.className = "crop__bar";
         const progressBarFill = document.createElement("div");
-        progressBarFill.className = "crop__barFill";
+        progressBarFill.className = "crop__bar-fill";
         progressBarFill.style.width = "0%";
         bar.appendChild(progressBarFill);
         cropEl.appendChild(bar);
@@ -116,96 +156,71 @@ function buildGridDom() {
 
         // Pre-create harvest-ready indicator (hidden unless progress >= 1).
         const harvestEl = document.createElement("div");
-        harvestEl.className = "harvestReady";
+        harvestEl.className = "harvest-ready";
         harvestEl.textContent = "!";
         harvestEl.title = "Ready to harvest (press E)";
         harvestEl.style.display = "none";
         el.appendChild(harvestEl);
 
-        cropEls[idx] = cropEl;
+        cropElements[idx] = cropEl;
         cropLabels[idx] = labelEl;
-        cropImgs[idx] = imgEl;
-        cropBarFills[idx] = progressBarFill;
-        harvestReadyEls[idx] = harvestEl;
+        cropImageElements[idx] = imgEl;
+        cropBarFillElements[idx] = progressBarFill;
+        harvestReadyElements[idx] = harvestEl;
       } else {
         // Path tiles don't need crop/harvest elements.
-        cropEls[idx] = null;
+        cropElements[idx] = null;
         cropLabels[idx] = null;
-        cropImgs[idx] = null;
-        cropBarFills[idx] = null;
-        harvestReadyEls[idx] = null;
+        cropImageElements[idx] = null;
+        cropBarFillElements[idx] = null;
+        harvestReadyElements[idx] = null;
       }
     }
   }
 
   // Create a single farmer element; we move it between tiles on demand.
-  farmerEl = document.createElement("div");
-  farmerEl.className = "farmer";
+  farmerElement = document.createElement("div");
+  farmerElement.className = "farmer";
   const farmerImg = document.createElement("img");
   farmerImg.className = "farmer__img";
   farmerImg.alt = "Pixel farmer";
   farmerImg.src = "./assets/sprites/pixel-farmer.svg";
-  farmerEl.appendChild(farmerImg);
+  farmerElement.appendChild(farmerImg);
 }
 
 function bindUi() {
-  const seedSelect = document.getElementById("seedSelect");
-  seedSelect.innerHTML = "";
-  for (const crop of Object.values(CROPS)) {
-    const seedOption = document.createElement("option");
-    seedOption.value = crop.id;
-    seedOption.textContent = `${crop.name} (€${crop.seedCost})`;
-    seedSelect.appendChild(seedOption);
-  }
-  seedSelect.value = state.selectedSeedId;
-  seedSelect.addEventListener("change", () => {
-    state.selectedSeedId = seedSelect.value;
-    updateShopInfo();
-    updateHighlights();
+  const seedSelect = document.getElementById("seed-select");
+  pauseButtonElement = document.getElementById("pause-btn");
+  setupSeedSelectUi(seedSelect);
+  const offUiSync = onUiSync((flags) => {
+    if (flags?.hud) updateHud();
+    if (flags?.shop) updateShopInfo();
+    if (flags?.weatherMachine) updateWeatherMachineUi();
+    if (flags?.highlights) updateHighlights();
   });
+  addUiDisposer(offUiSync);
 
   function tryBuySelectedSeed(count = 1) {
     if (state.sunriseTransition) return;
-    if (state.farmer.x !== 13 || state.farmer.y !== 0) return;
+    if (!isAtShopTile()) return;
     const crop = CROPS[state.selectedSeedId];
     if (!crop) return;
     if (count <= 0) return;
     const cost = crop.seedCost * count;
-    if (state.money < cost) return;
+    if (state.moneyEur < cost) return;
 
-    state.money -= cost;
+    state.moneyEur -= cost;
     state.inventory[crop.id] = (state.inventory[crop.id] ?? 0) + count;
-    updateHud();
-    updateShopInfo();
-    updateWeatherMachineUi();
+    emitUiSync({ hud: true, shop: true, weatherMachine: true });
   }
 
-  document.getElementById("buySeedBtn").addEventListener("click", () => {
-    tryBuySelectedSeed(1);
-  });
+  setupSeedPurchaseUi(tryBuySelectedSeed);
 
-  const buySeed5Btn = document.getElementById("buySeed5Btn");
-  const buySeed10Btn = document.getElementById("buySeed10Btn");
-  if (buySeed5Btn) buySeed5Btn.addEventListener("click", () => tryBuySelectedSeed(5));
-  if (buySeed10Btn) buySeed10Btn.addEventListener("click", () => tryBuySelectedSeed(10));
-
-  const WEATHER_SPEND_UNIT_EUR = 10; // each 10€ => 10% chance
-  document.getElementById("weatherMachineSunBtn").addEventListener("click", () => {
-    // Current requirement: Stand exactly on tile (13,13)
-    if (state.sunriseTransition || state.farmer.x !== 13 || state.farmer.y !== 13) return;
-    state.weatherMachineSelection = "sun";
-    commitWeatherMachineSpend(WEATHER_SPEND_UNIT_EUR);
-  });
-  document.getElementById("weatherMachineRainBtn").addEventListener("click", () => {
-    // Current requirement: Stand exactly on tile (13,13)
-    if (state.sunriseTransition || state.farmer.x !== 13 || state.farmer.y !== 13) return;
-    state.weatherMachineSelection = "rain";
-    commitWeatherMachineSpend(WEATHER_SPEND_UNIT_EUR);
-  });
-
-  const pauseBtn = document.getElementById("pauseBtn");
+  const pauseBtn = pauseButtonElement;
   if (pauseBtn) {
-    pauseBtn.addEventListener("click", () => setPaused(!state.paused));
+    const onPauseClick = () => setPaused(!state.paused);
+    pauseBtn.addEventListener("click", onPauseClick);
+    addUiDisposer(() => pauseBtn.removeEventListener("click", onPauseClick));
   }
 
   // Allow holding Space/E to plant/harvest continuously while moving.
@@ -224,24 +239,123 @@ function bindUi() {
     tryMove(dx, dy);
     if (state.farmer.x !== prevX || state.farmer.y !== prevY) {
       maybeHarvestAndPlant();
-      updateShopInfo();
-      updateWeatherMachineUi();
+      emitUiSync({ shop: true, weatherMachine: true });
     }
   }
 
   function commitWeatherMachineSpend(amount) {
     if (amount <= 0) return;
-    if (state.money < amount) return;
+    if (state.moneyEur < amount) return;
 
-    state.money -= amount;
+    state.moneyEur -= amount;
     state.weatherMachineSpendCommitted += amount;
 
-    updateHud();
-    updateShopInfo();
-    updateWeatherMachineUi();
+    emitUiSync({ hud: true, shop: true, weatherMachine: true });
   }
 
-  window.addEventListener("keydown", (e) => {
+  setupWeatherMachineUiHandlers(commitWeatherMachineSpend);
+  setupKeyboardControls(seedSelect, tryBuySelectedSeed, () => {
+    holdingPlant = true;
+  }, () => {
+    holdingHarvest = true;
+  }, () => {
+    holdingPlant = false;
+  }, () => {
+    holdingHarvest = false;
+  }, doMove);
+
+  emitUiSync({ shop: true, weatherMachine: true });
+  setPaused(state.paused);
+
+  // Cache frequently-updated UI elements once.
+  weatherMachineSunButtonElement = document.getElementById("weather-machine-sun-btn");
+  weatherMachineRainButtonElement = document.getElementById("weather-machine-rain-btn");
+  weatherMachineInfoElement = document.getElementById("weather-machine-info");
+  shopSeedInfoElement = document.getElementById("seed-info");
+  inventoryGridElement = document.getElementById("inventory-grid");
+  setupInventoryGridUi();
+  setupSaveLoadControls();
+  setupMusicControls();
+  updateDayLengthHintUi();
+}
+
+function isAtShopTile() {
+  return state.farmer.x === SHOP_TILE_X && state.farmer.y === SHOP_TILE_Y;
+}
+
+function isAtWeatherMachineTile() {
+  return state.farmer.x === WEATHER_MACHINE_TILE_X && state.farmer.y === WEATHER_MACHINE_TILE_Y;
+}
+
+function setupSeedSelectUi(seedSelect) {
+  seedSelectElementCache = seedSelect;
+  seedSelect.innerHTML = "";
+  for (const crop of Object.values(CROPS)) {
+    const seedOption = document.createElement("option");
+    seedOption.value = crop.id;
+    seedOption.textContent = `${crop.name} (€${crop.seedCost})`;
+    seedSelect.appendChild(seedOption);
+  }
+  seedSelect.value = state.selectedSeedId;
+  const onSeedChange = () => {
+    state.selectedSeedId = seedSelect.value;
+    emitUiSync({ shop: true, highlights: true });
+  };
+  seedSelect.addEventListener("change", onSeedChange);
+  addUiDisposer(() => seedSelect.removeEventListener("change", onSeedChange));
+}
+
+function setupSeedPurchaseUi(tryBuySelectedSeed) {
+  const buySeedBtn = document.getElementById("buy-seed-btn");
+  const buySeed5Btn = document.getElementById("buy-seed-5-btn");
+  const buySeed10Btn = document.getElementById("buy-seed-10-btn");
+  if (buySeedBtn) {
+    const onBuy1 = () => tryBuySelectedSeed(1);
+    buySeedBtn.addEventListener("click", onBuy1);
+    addUiDisposer(() => buySeedBtn.removeEventListener("click", onBuy1));
+  }
+
+  buySeedButtonElement = buySeedBtn;
+  buySeed5ButtonElement = buySeed5Btn;
+  buySeed10ButtonElement = buySeed10Btn;
+
+  if (buySeed5Btn) {
+    const onBuy5 = () => tryBuySelectedSeed(5);
+    buySeed5Btn.addEventListener("click", onBuy5);
+    addUiDisposer(() => buySeed5Btn.removeEventListener("click", onBuy5));
+  }
+  if (buySeed10Btn) {
+    const onBuy10 = () => tryBuySelectedSeed(10);
+    buySeed10Btn.addEventListener("click", onBuy10);
+    addUiDisposer(() => buySeed10Btn.removeEventListener("click", onBuy10));
+  }
+}
+
+function setupWeatherMachineUiHandlers(commitWeatherMachineSpend) {
+  const sunBtn = document.getElementById("weather-machine-sun-btn");
+  const rainBtn = document.getElementById("weather-machine-rain-btn");
+  if (sunBtn) {
+    const onSunClick = () => {
+      if (state.sunriseTransition || !isAtWeatherMachineTile()) return;
+      state.weatherMachineSelection = "sun";
+      commitWeatherMachineSpend(WEATHER_SPEND_UNIT_EUR);
+    };
+    sunBtn.addEventListener("click", onSunClick);
+    addUiDisposer(() => sunBtn.removeEventListener("click", onSunClick));
+  }
+  if (rainBtn) {
+    const onRainClick = () => {
+      if (state.sunriseTransition || !isAtWeatherMachineTile()) return;
+      state.weatherMachineSelection = "rain";
+      commitWeatherMachineSpend(WEATHER_SPEND_UNIT_EUR);
+    };
+    rainBtn.addEventListener("click", onRainClick);
+    addUiDisposer(() => rainBtn.removeEventListener("click", onRainClick));
+  }
+}
+
+function setupKeyboardControls(seedSelect, tryBuySelectedSeed, setHoldingPlant, setHoldingHarvest, clearHoldingPlant, clearHoldingHarvest, doMove) {
+  const onKeyDown = (e) => {
     const key = e.key.toLowerCase();
     if (key === "p") {
       setPaused(!state.paused);
@@ -252,8 +366,6 @@ function bindUi() {
 
     const activeTag = (document.activeElement?.tagName ?? "").toLowerCase();
     const isTyping = ["input", "textarea", "select"].includes(activeTag);
-
-    // Block all game actions while the user is typing in a form field.
     if (isTyping) return;
 
     if (["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright", " ", "e"].includes(key)) {
@@ -266,47 +378,79 @@ function bindUi() {
     if (key === "d" || key === "arrowright") doMove(1, 0);
 
     if (key === " ") {
-      holdingPlant = true;
+      setHoldingPlant();
       if (!e.repeat) tryPlantHere();
     }
     if (key === "e") {
-      holdingHarvest = true;
+      setHoldingHarvest();
       if (!e.repeat) tryHarvestHere();
     }
 
-    // Shop hotkeys.
     if (/^[1-5]$/.test(e.key)) {
       const idx = Number(e.key) - 1;
       const nextSeedId = SEED_KEY_ORDER[idx];
       if (nextSeedId) {
         state.selectedSeedId = nextSeedId;
         if (seedSelect) seedSelect.value = nextSeedId;
-        updateShopInfo();
-        updateHighlights();
+        emitUiSync({ shop: true, highlights: true });
       }
     }
     if (key === "b") tryBuySelectedSeed(1);
     if (key === "n") tryBuySelectedSeed(5);
     if (key === "m") tryBuySelectedSeed(10);
-  });
+  };
+  window.addEventListener("keydown", onKeyDown);
+  addUiDisposer(() => window.removeEventListener("keydown", onKeyDown));
 
-  window.addEventListener("keyup", (e) => {
+  const onKeyUp = (e) => {
     const key = e.key.toLowerCase();
-    if (key === " ") holdingPlant = false;
-    if (key === "e") holdingHarvest = false;
-  });
+    if (key === " ") clearHoldingPlant();
+    if (key === "e") clearHoldingHarvest();
+  };
+  window.addEventListener("keyup", onKeyUp);
+  addUiDisposer(() => window.removeEventListener("keyup", onKeyUp));
+}
 
-  updateShopInfo();
-  updateWeatherMachineUi();
-  setPaused(state.paused);
+function setupInventoryGridUi() {
+  if (!inventoryGridElement) return;
+  inventoryGridElement.innerHTML = "";
+  for (const cropId of SEED_KEY_ORDER) {
+    const cropDef = CROPS[cropId];
+    const itemEl = document.createElement("div");
+    itemEl.className = "inventory-item";
+    const onInventoryClick = () => {
+      state.selectedSeedId = cropId;
+      if (seedSelectElementCache) seedSelectElementCache.value = cropId;
+      emitUiSync({ shop: true, highlights: true });
+    };
+    itemEl.addEventListener("click", onInventoryClick);
+    addUiDisposer(() => itemEl.removeEventListener("click", onInventoryClick));
 
-  const saveBtn = document.getElementById("saveCsvBtn");
-  const loadBtn = document.getElementById("loadCsvBtn");
-  const loadInput = document.getElementById("loadCsvInput");
-  const statusEl = document.getElementById("saveLoadStatus");
+    const imgEl = document.createElement("img");
+    imgEl.className = "inventory-item__img";
+    imgEl.src = `./assets/sprites/pixel-${cropDef.id}-grown.svg`;
+    imgEl.alt = cropDef.name;
+    itemEl.appendChild(imgEl);
+
+    const countEl = document.createElement("div");
+    countEl.className = "inventory-item__count";
+    itemEl.appendChild(countEl);
+
+    inventoryGridElement.appendChild(itemEl);
+    inventoryItemElements[cropId] = itemEl;
+    inventoryCountElements[cropId] = countEl;
+    lastInventoryCounts[cropId] = null;
+  }
+}
+
+function setupSaveLoadControls() {
+  const saveBtn = document.getElementById("save-csv-btn");
+  const loadBtn = document.getElementById("load-csv-btn");
+  const loadInput = document.getElementById("load-csv-input");
+  const statusEl = document.getElementById("save-load-status");
 
   if (saveBtn) {
-    saveBtn.addEventListener("click", () => {
+    const onSaveClick = () => {
       const csv = exportStateToCsv();
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -320,11 +464,13 @@ function bindUi() {
       URL.revokeObjectURL(url);
 
       if (statusEl) statusEl.textContent = "Saved CSV downloaded.";
-    });
+    };
+    saveBtn.addEventListener("click", onSaveClick);
+    addUiDisposer(() => saveBtn.removeEventListener("click", onSaveClick));
   }
 
   if (loadBtn && loadInput) {
-    loadBtn.addEventListener("click", () => {
+    const onLoadClick = () => {
       const file = loadInput.files?.[0];
       if (!file) {
         if (statusEl) statusEl.textContent = "Select a CSV file first.";
@@ -336,6 +482,7 @@ function bindUi() {
         try {
           const text = String(reader.result ?? "");
           importStateFromCsv(text);
+          emitUiSync({ hud: true, shop: true, weatherMachine: true, highlights: true });
           if (statusEl) statusEl.textContent = "CSV loaded successfully.";
         } catch (err) {
           if (statusEl) statusEl.textContent = `Load failed: ${err?.message ?? err}`;
@@ -345,15 +492,18 @@ function bindUi() {
         if (statusEl) statusEl.textContent = "Load failed: file read error.";
       };
       reader.readAsText(file);
-    });
+    };
+    loadBtn.addEventListener("click", onLoadClick);
+    addUiDisposer(() => loadBtn.removeEventListener("click", onLoadClick));
   }
+}
 
-  // ---- Background music controls ----
+function setupMusicControls() {
   const bgm = document.getElementById("bgm");
-  const musicPlayBtn = document.getElementById("musicPlayBtn");
-  const musicPauseBtn = document.getElementById("musicPauseBtn");
-  const musicVolumeInput = document.getElementById("musicVolume");
-  const musicVolumeValue = document.getElementById("musicVolumeValue");
+  const musicPlayBtn = document.getElementById("music-play-btn");
+  const musicPauseBtn = document.getElementById("music-pause-btn");
+  const musicVolumeInput = document.getElementById("music-volume");
+  const musicVolumeValue = document.getElementById("music-volume-value");
 
   if (bgm && musicPlayBtn && musicPauseBtn && musicVolumeInput && musicVolumeValue) {
     const setUiPlaying = (isPlaying) => {
@@ -366,94 +516,111 @@ function bindUi() {
       if (musicVolumeValue.textContent !== `${volumePercent}%`) musicVolumeValue.textContent = `${volumePercent}%`;
     };
 
-    // Apply initial slider volume and attempt autoplay (may still be blocked by browser policy).
     syncVolumeUi();
     const initialVolumePercent = Math.max(0, Math.min(100, Number(musicVolumeInput.value) || 0));
+    state.musicVolumePercent = initialVolumePercent;
     bgm.volume = clamp01((initialVolumePercent / 100) * getBgmBase());
     bgm.muted = false;
     setUiPlaying(false);
     musicPauseBtn.disabled = true;
 
-    // Try to start music immediately on load.
-    bgm.play().catch(() => {
-      // Autoplay may be blocked until user gesture; UI stays in paused state.
-    });
+    bgm.play().catch(() => {});
 
-    musicPlayBtn.addEventListener("click", async () => {
+    const onMusicPlayClick = async () => {
       try {
         await bgm.play();
       } catch {
         // Autoplay / interaction restrictions can prevent play; UI stays in paused state.
       }
-    });
+    };
+    musicPlayBtn.addEventListener("click", onMusicPlayClick);
+    addUiDisposer(() => musicPlayBtn.removeEventListener("click", onMusicPlayClick));
 
-    musicPauseBtn.addEventListener("click", () => {
+    const onMusicPauseClick = () => {
       bgm.pause();
-    });
+    };
+    musicPauseBtn.addEventListener("click", onMusicPauseClick);
+    addUiDisposer(() => musicPauseBtn.removeEventListener("click", onMusicPauseClick));
 
-    musicVolumeInput.addEventListener("input", () => {
+    const onMusicVolumeInput = () => {
       syncVolumeUi();
       const volumePercent = Math.max(0, Math.min(100, Number(musicVolumeInput.value) || 0));
+      state.musicVolumePercent = volumePercent;
       bgm.volume = clamp01((volumePercent / 100) * getBgmBase());
       bgm.muted = bgm.volume <= 0;
-    });
+    };
+    musicVolumeInput.addEventListener("input", onMusicVolumeInput);
+    addUiDisposer(() => musicVolumeInput.removeEventListener("input", onMusicVolumeInput));
 
-    bgm.addEventListener("play", () => {
+    const onBgmPlay = () => {
       setUiPlaying(true);
       syncWeatherAmbience();
-    });
-    bgm.addEventListener("pause", () => {
+    };
+    const onBgmPause = () => {
       setUiPlaying(false);
       syncWeatherAmbience();
-    });
-    bgm.addEventListener("volumechange", () => {
+    };
+    const onBgmVolumeChange = () => {
       syncVolumeUi();
       syncWeatherAmbience();
-    });
+    };
+    bgm.addEventListener("play", onBgmPlay);
+    bgm.addEventListener("pause", onBgmPause);
+    bgm.addEventListener("volumechange", onBgmVolumeChange);
+    addUiDisposer(() => bgm.removeEventListener("play", onBgmPlay));
+    addUiDisposer(() => bgm.removeEventListener("pause", onBgmPause));
+    addUiDisposer(() => bgm.removeEventListener("volumechange", onBgmVolumeChange));
   }
+}
 
-  // Update the hint to reflect the actual minutes per day based on constants.
+function updateDayLengthHintUi() {
   const minutesPerDay = (MS_PER_DAY / 60000).toFixed(1);
-  const hintEl = document.getElementById("dayLengthMinutes");
+  const hintEl = document.getElementById("day-length-minutes");
   if (hintEl) {
     hintEl.textContent = minutesPerDay;
   }
 }
 
 function updateWeatherMachineUi() {
-  const sunBtn = document.getElementById("weatherMachineSunBtn");
-  const rainBtn = document.getElementById("weatherMachineRainBtn");
-  // Current requirement: Stand exactly on tile (13,13)
-  const isAtMachine = state.farmer.x === 13 && state.farmer.y === 13;
+  if (!weatherMachineSunButtonElement) weatherMachineSunButtonElement = document.getElementById("weather-machine-sun-btn");
+  if (!weatherMachineRainButtonElement) weatherMachineRainButtonElement = document.getElementById("weather-machine-rain-btn");
+  if (!weatherMachineInfoElement) weatherMachineInfoElement = document.getElementById("weather-machine-info");
+  const isAtMachine = isAtWeatherMachineTile();
   const isEnabled = isAtMachine && !state.sunriseTransition;
 
-  if (sunBtn) {
-    sunBtn.classList.toggle("btn--active", state.weatherMachineSelection === "sun");
-    sunBtn.disabled = !isEnabled;
+  if (weatherMachineSunButtonElement) {
+    weatherMachineSunButtonElement.classList.toggle("btn--active", state.weatherMachineSelection === "sun");
+    weatherMachineSunButtonElement.disabled = !isEnabled;
   }
-  if (rainBtn) {
-    rainBtn.classList.toggle("btn--active", state.weatherMachineSelection === "rain");
-    rainBtn.disabled = !isEnabled;
+  if (weatherMachineRainButtonElement) {
+    weatherMachineRainButtonElement.classList.toggle("btn--active", state.weatherMachineSelection === "rain");
+    weatherMachineRainButtonElement.disabled = !isEnabled;
   }
 
-  const info = document.getElementById("weatherMachineInfo");
-  if (info) {
+  if (weatherMachineInfoElement) {
     const chance = Math.round(getEffectiveWeatherChangeChance() * 100);
     const spent = state.weatherMachineSpendCommitted ?? 0;
     const weatherDef = WEATHER[state.weatherMachineSelection];
     const weatherName = weatherDef?.name ?? state.weatherMachineSelection;
     const weatherCssClass = state.weatherMachineSelection === "sun" ? "text--sun" : (state.weatherMachineSelection === "rain" ? "text--rain" : "");
-    info.innerHTML = `Tomorrow: ${weatherIcon(state.weatherMachineSelection)} <span class="${weatherCssClass}">${weatherName}</span> · Change chance: ${chance}% (spent €${spent})`;
-    
+    let infoHtml = `Tomorrow: ${weatherIcon(state.weatherMachineSelection)} <span class="${weatherCssClass}">${weatherName}</span> · Change chance: ${chance}% (spent €${spent})`;
+
     if (!isAtMachine) {
-      info.innerHTML = `<span style="color:var(--danger);font-weight:bold;">Stand on Machine (bottom-right) to use</span><br/>${info.innerHTML}`;
+      infoHtml = `<span style="color:var(--danger);font-weight:bold;">Stand on Machine (bottom-right) to use</span><br/>${infoHtml}`;
+    }
+    if (lastWeatherMachineInfoHtml !== infoHtml) {
+      weatherMachineInfoElement.innerHTML = infoHtml;
+      lastWeatherMachineInfoHtml = infoHtml;
     }
   }
 }
 
 function updateShopInfo() {
   const crop = CROPS[state.selectedSeedId];
-  const seedInfo = document.getElementById("seedInfo");
+  if (!shopSeedInfoElement) shopSeedInfoElement = document.getElementById("seed-info");
+  if (!buySeedButtonElement) buySeedButtonElement = document.getElementById("buy-seed-btn");
+  if (!buySeed5ButtonElement) buySeed5ButtonElement = document.getElementById("buy-seed-5-btn");
+  if (!buySeed10ButtonElement) buySeed10ButtonElement = document.getElementById("buy-seed-10-btn");
   const sunMult = crop?.weatherGrowthMultipliers?.sun ?? 1;
   const rainMult = crop?.weatherGrowthMultipliers?.rain ?? 1;
   const waterAdjMult = crop?.adjacentWaterloggedGrowthMultiplier ?? null;
@@ -469,95 +636,74 @@ function updateShopInfo() {
         .filter(Boolean)
         .join(" ")
     : "";
-  seedInfo.textContent = infoText;
-
-  const inventoryGrid = document.getElementById("inventoryGrid");
-  if (inventoryGrid) {
-    inventoryGrid.innerHTML = "";
-    for (const cropId of SEED_KEY_ORDER) {
-      const cropDef = CROPS[cropId];
-      const itemEl = document.createElement("div");
-      itemEl.className = "inventoryItem";
-      if (cropId === state.selectedSeedId) {
-        itemEl.classList.add("inventoryItem--selected");
-      }
-      
-      itemEl.addEventListener("click", () => {
-        state.selectedSeedId = cropId;
-        const seedSelect = document.getElementById("seedSelect");
-        if (seedSelect) seedSelect.value = cropId;
-        updateShopInfo();
-        updateHighlights();
-      });
-
-      const imgEl = document.createElement("img");
-      imgEl.className = "inventoryItem__img";
-      imgEl.src = `./assets/sprites/pixel-${cropDef.id}-grown.svg`;
-      imgEl.alt = cropDef.name;
-      itemEl.appendChild(imgEl);
-
-      const countEl = document.createElement("div");
-      countEl.className = "inventoryItem__count";
-      countEl.textContent = state.inventory[cropDef.id] ?? 0;
-      itemEl.appendChild(countEl);
-
-      inventoryGrid.appendChild(itemEl);
+  for (const cropId of SEED_KEY_ORDER) {
+    const itemEl = inventoryItemElements[cropId];
+    const countEl = inventoryCountElements[cropId];
+    if (itemEl) itemEl.classList.toggle("inventory-item--selected", cropId === state.selectedSeedId);
+    const nextCount = state.inventory[cropId] ?? 0;
+    if (countEl && lastInventoryCounts[cropId] !== nextCount) {
+      countEl.textContent = String(nextCount);
+      lastInventoryCounts[cropId] = nextCount;
     }
   }
 
-  const btn = document.getElementById("buySeedBtn");
-  const btn5 = document.getElementById("buySeed5Btn");
-  const btn10 = document.getElementById("buySeed10Btn");
-  const isAtShop = state.farmer.x === 13 && state.farmer.y === 0;
-
-  if (btn) btn.disabled = state.sunriseTransition || !crop || !isAtShop || state.money < crop.seedCost * 1;
-  if (btn5) btn5.disabled = state.sunriseTransition || !crop || !isAtShop || state.money < crop.seedCost * 5;
-  if (btn10) btn10.disabled = state.sunriseTransition || !crop || !isAtShop || state.money < crop.seedCost * 10;
-
-  if (!isAtShop && seedInfo) {
-    seedInfo.innerHTML = `<span style="color:var(--danger);font-weight:bold;">Stand on Shop tile (top-right) to buy</span><br/>${infoText}`;
+  const isAtShop = isAtShopTile();
+  const seedInfoText = !isAtShop
+    ? `<span style="color:var(--danger);font-weight:bold;">Stand on Shop tile (top-right) to buy</span><br/>${infoText}`
+    : infoText;
+  if (shopSeedInfoElement) {
+    if (isAtShop) {
+      if (shopSeedInfoElement.textContent !== seedInfoText) shopSeedInfoElement.textContent = seedInfoText;
+    } else if (shopSeedInfoElement.innerHTML !== seedInfoText) {
+      shopSeedInfoElement.innerHTML = seedInfoText;
+    }
   }
+
+  if (buySeedButtonElement) buySeedButtonElement.disabled = state.sunriseTransition || !crop || !isAtShop || state.moneyEur < crop.seedCost * 1;
+  if (buySeed5ButtonElement) buySeed5ButtonElement.disabled = state.sunriseTransition || !crop || !isAtShop || state.moneyEur < crop.seedCost * 5;
+  if (buySeed10ButtonElement) buySeed10ButtonElement.disabled = state.sunriseTransition || !crop || !isAtShop || state.moneyEur < crop.seedCost * 10;
+  lastSelectedSeedId = state.selectedSeedId;
 }
 
 function updateHud() {
-  if (!hudDayEl) {
-    hudDayEl = document.getElementById("dayValue");
-    hudTimeEl = document.getElementById("timeValue");
-    hudWeatherIconEl = document.getElementById("weatherIcon");
-    hudWeatherValueEl = document.getElementById("weatherValue");
-    hudMoneyEl = document.getElementById("moneyValue");
+  if (!hudDayElement) {
+    hudDayElement = document.getElementById("day-value");
+    hudTimeElement = document.getElementById("time-value");
+    hudWeatherIconElement = document.getElementById("weather-icon");
+    hudWeatherValueElement = document.getElementById("weather-value");
+    hudMoneyElement = document.getElementById("money-value");
   }
 
   if (lastHudDay !== state.day) {
-    hudDayEl.textContent = String(state.day);
+    hudDayElement.textContent = String(state.day);
     lastHudDay = state.day;
   }
 
-  const timeStr = formatTimeOfDay(state.msIntoDay);
+  const timeStr = formatTimeOfDay(state.dayElapsedMs);
   if (lastHudTime !== timeStr) {
-    hudTimeEl.textContent = timeStr;
+    hudTimeElement.textContent = timeStr;
     lastHudTime = timeStr;
   }
   
   const isNight = isNighttime();
   if (lastHudWeatherId !== state.weatherId || lastHudIsNight !== isNight) {
     if (isNight) {
-      hudWeatherValueEl.innerHTML = `<span class="text--night">Night</span>`;
-      if (hudWeatherIconEl) hudWeatherIconEl.textContent = "🌙";
+      hudWeatherValueElement.innerHTML = `<span class="text--night">Night</span>`;
+      if (hudWeatherIconElement) hudWeatherIconElement.textContent = "🌙";
     } else {
       const weatherDef = WEATHER[state.weatherId];
       const weatherName = weatherDef?.name ?? state.weatherId;
       const weatherCssClass = state.weatherId === "sun" ? "text--sun" : (state.weatherId === "rain" ? "text--rain" : "");
-      hudWeatherValueEl.innerHTML = `<span class="${weatherCssClass}">${weatherName}</span>`;
-      if (hudWeatherIconEl) hudWeatherIconEl.textContent = weatherIcon(state.weatherId);
+      hudWeatherValueElement.innerHTML = `<span class="${weatherCssClass}">${weatherName}</span>`;
+      if (hudWeatherIconElement) hudWeatherIconElement.textContent = weatherIcon(state.weatherId);
     }
     lastHudWeatherId = state.weatherId;
     lastHudIsNight = isNight;
   }
 
-  if (lastHudMoney !== state.money) {
-    hudMoneyEl.textContent = String(state.money);
-    lastHudMoney = state.money;
+  if (lastHudMoney !== state.moneyEur) {
+    hudMoneyElement.textContent = String(state.moneyEur);
+    lastHudMoney = state.moneyEur;
   }
 }
 
@@ -607,10 +753,9 @@ function tryPlantHere() {
 
   tile.crop = { cropId, progress: 0 };
   state.inventory[cropId] = have - 1;
-  tile.dirty = true;
+  markTileDirty(tileIndex(x, y));
 
-  updateShopInfo();
-  updateHighlights();
+  emitUiSync({ shop: true, highlights: true });
   const idx = tileIndex(state.farmer.x, state.farmer.y);
   renderTile(idx);
 }
@@ -623,35 +768,34 @@ function tryHarvestHere() {
   if (!cropDef) return;
   if (tile.crop.progress < 1) return;
 
-  state.money += cropDef.harvestValue;
+  state.moneyEur += cropDef.harvestValue;
   tile.crop = null;
   tile.readyRotMsRemaining = 0;
   tile.blackMsRemaining = 0;
-  tile.dirty = true;
-  updateHud();
-  updateShopInfo();
-  updateHighlights();
+  markTileDirty(tileIndex(state.farmer.x, state.farmer.y));
+  emitUiSync({ hud: true, shop: true, highlights: true });
   const idx = tileIndex(state.farmer.x, state.farmer.y);
   renderTile(idx);
 }
 
 function syncFarmerDom() {
-  if (!farmerEl) return;
+  if (!farmerElement) return;
   const idx = tileIndex(state.farmer.x, state.farmer.y);
   if (idx === lastFarmerIdx) return;
-  const el = tileEls[idx];
+  const el = tileElements[idx];
   if (!el) return;
-  el.appendChild(farmerEl);
+  el.appendChild(farmerElement);
   lastFarmerIdx = idx;
 }
 
 function renderTile(idx, force = false) {
   const tile = state.tiles[idx];
   if (!tile) return;
-  if (!force && !tile.dirty) return;
+  if (!force && !dirtyTileSet.has(idx)) return;
+  dirtyTileSet.delete(idx);
   tile.dirty = false;
 
-  const el = tileEls[idx];
+  const el = tileElements[idx];
   if (!tile || !el) return;
 
   const isBlack = tile.kind === "field" && tile.blackMsRemaining > 0;
@@ -659,10 +803,10 @@ function renderTile(idx, force = false) {
   el.classList.toggle("tile--scorched", tile.kind === "field" && tile.scorched && !isBlack);
   el.classList.toggle("tile--black", isBlack);
 
-  const cropEl = cropEls[idx];
+  const cropEl = cropElements[idx];
   const labelEl = cropLabels[idx];
-  const fillEl = cropBarFills[idx];
-  const harvestEl = harvestReadyEls[idx];
+  const fillEl = cropBarFillElements[idx];
+  const harvestEl = harvestReadyElements[idx];
   if (!cropEl || !labelEl || !fillEl || !harvestEl) return;
 
   if (tile.kind === "field" && tile.crop && !isBlack) {
@@ -674,7 +818,7 @@ function renderTile(idx, force = false) {
     cropEl.dataset.stage = stage;
     cropEl.dataset.crop = cropId;
 
-    const imgEl = cropImgs[idx];
+    const imgEl = cropImageElements[idx];
     if (lastCropIdByIdx[idx] !== cropId || lastCropStageByIdx[idx] !== stage) {
       labelEl.textContent = cropDef?.name ?? "?"; // kept for accessibility/fallback
       cropEl.style.background = "transparent";
@@ -697,8 +841,15 @@ function renderTile(idx, force = false) {
 }
 
 function renderAll(force = false) {
-  for (let i = 0; i < state.tiles.length; i++) {
-    renderTile(i, force);
+  if (force) {
+    for (let i = 0; i < state.tiles.length; i++) {
+      renderTile(i, true);
+    }
+  } else {
+    const dirtyList = Array.from(dirtyTileSet);
+    for (const idx of dirtyList) {
+      renderTile(idx, false);
+    }
   }
   syncFarmerDom();
 }
@@ -708,14 +859,14 @@ function updateHighlights() {
   const tile = state.tiles[idx];
 
   if (!tile || tile.kind !== "field") {
-    if (lastHighlightedIdx != null) tileEls[lastHighlightedIdx]?.classList.remove("tile--highlight");
+    if (lastHighlightedIdx != null) tileElements[lastHighlightedIdx]?.classList.remove("tile--highlight");
     lastHighlightedIdx = null;
     return;
   }
 
   if (lastHighlightedIdx === idx) return;
-  if (lastHighlightedIdx != null) tileEls[lastHighlightedIdx]?.classList.remove("tile--highlight");
-  tileEls[idx]?.classList.add("tile--highlight");
+  if (lastHighlightedIdx != null) tileElements[lastHighlightedIdx]?.classList.remove("tile--highlight");
+  tileElements[idx]?.classList.add("tile--highlight");
   lastHighlightedIdx = idx;
 }
 

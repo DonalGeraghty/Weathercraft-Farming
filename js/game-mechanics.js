@@ -2,14 +2,14 @@ function clamp01(value) {
   return Math.max(0, Math.min(1, value));
 }
 
-function shuffleArrayInPlace(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
+function shuffleArrayInPlace(items) {
+  for (let i = items.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    const temp = arr[i];
-    arr[i] = arr[j];
-    arr[j] = temp;
+    const temp = items[i];
+    items[i] = items[j];
+    items[j] = temp;
   }
-  return arr;
+  return items;
 }
 
 function cropStage(progress) {
@@ -26,8 +26,8 @@ function tileIndex(x, y) {
   return y * WORLD_SIZE + x;
 }
 
-function formatTimeOfDay(msIntoDay) {
-  const totalMinutes = Math.floor((msIntoDay / MS_PER_DAY) * 24 * 60);
+function formatTimeOfDay(dayElapsedMs) {
+  const totalMinutes = Math.floor((dayElapsedMs / MS_PER_DAY) * 24 * 60);
   const h24 = Math.floor(totalMinutes / 60) % 24;
   const suffix = h24 >= 12 ? "PM" : "AM";
   const h12raw = h24 % 12;
@@ -40,7 +40,7 @@ function formatTimeOfDay(msIntoDay) {
  * This is a 9-hour window, leaving 15 hours of daylight for growing crops.
  */
 function isNighttime() {
-  const totalMinutes = Math.floor((state.msIntoDay / MS_PER_DAY) * 24 * 60);
+  const totalMinutes = Math.floor((state.dayElapsedMs / MS_PER_DAY) * 24 * 60);
   const h24 = Math.floor(totalMinutes / 60) % 24;
   return h24 >= 22 || h24 < 7;
 }
@@ -131,19 +131,26 @@ function updateWaterAdjacency() {
   }
 }
 
+function markTileDirtySafe(idx) {
+  const tile = state.tiles[idx];
+  if (!tile) return;
+  tile.dirty = true;
+  if (typeof markTileDirty === "function") markTileDirty(idx);
+}
+
 /** A field tile may be waterlogged or scorched, never both; waterlogged wins if a save had both. */
-function reconcileExclusiveHazards(tile) {
+function reconcileExclusiveHazards(tile, idx = -1) {
   if (!tile || tile.kind !== "field") return;
   // A tile may only ever be one hazard type; waterlogged takes priority.
   if (tile.waterlogged) {
     if (tile.scorched) {
       tile.scorched = false;
-      tile.dirty = true;
+      if (idx >= 0) markTileDirtySafe(idx);
     }
   } else if (tile.scorched) {
     if (tile.waterlogged) {
       tile.waterlogged = false;
-      tile.dirty = true;
+      if (idx >= 0) markTileDirtySafe(idx);
     }
   }
 }
@@ -157,7 +164,7 @@ function enforceHazardPlantValidity() {
       if (tile.crop) {
         tile.crop = null;
         tile.readyRotMsRemaining = 0;
-        tile.dirty = true;
+        markTileDirtySafe(idx);
       }
       continue;
     }
@@ -171,7 +178,7 @@ function enforceHazardPlantValidity() {
       if (tile.waterlogged || tile.scorched) {
         tile.crop = null;
         tile.readyRotMsRemaining = 0;
-        tile.dirty = true;
+        markTileDirtySafe(idx);
       }
       continue;
     }
@@ -180,7 +187,7 @@ function enforceHazardPlantValidity() {
       if (!tile.scorched) {
         tile.crop = null;
         tile.readyRotMsRemaining = 0;
-        tile.dirty = true;
+        markTileDirtySafe(idx);
       }
       continue;
     }
@@ -192,13 +199,13 @@ function enforceHazardPlantValidity() {
     if (tile.waterlogged || tile.scorched) {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
-      tile.dirty = true;
+      markTileDirtySafe(idx);
       continue;
     }
     if (!isAdjacentToWaterlogged(x, y)) {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
-      tile.dirty = true;
+      markTileDirtySafe(idx);
     }
   }
 }
@@ -230,7 +237,7 @@ function addHazardCells(type, addCount) {
     tile.crop = null;              // destroys any vegetables
     tile.readyRotMsRemaining = 0;  // prevents rotting after being destroyed
     tile.blackMsRemaining = 0;     // hazards overwrite rot
-    tile.dirty = true;
+    markTileDirtySafe(idx);
 
     // Revert the opposite hazard within 2 tiles of the new cell.
     const centerX = idx % WORLD_SIZE;
@@ -240,10 +247,10 @@ function addHazardCells(type, addCount) {
         const neighborX = centerX + dx;
         const neighborY = centerY + dy;
         if (!isField(neighborX, neighborY)) continue;
-        const nT = state.tiles[tileIndex(neighborX, neighborY)];
-        if (nT[opposite]) {
-          nT[opposite] = false;
-          nT.dirty = true;
+        const neighborTile = state.tiles[tileIndex(neighborX, neighborY)];
+        if (neighborTile[opposite]) {
+          neighborTile[opposite] = false;
+          markTileDirtySafe(tileIndex(neighborX, neighborY));
         }
       }
     }
@@ -292,21 +299,22 @@ function growAllCrops(dtMs) {
     const oldStage = cropStage(oldProgress);
     const oldPercent = Math.floor(oldProgress * 100);
 
-    const dProgress = growthPerDay * globalMultiplier * cropWeatherMult * envMult * growthThisTick;
-    const newProgress = clamp01(oldProgress + dProgress);
+    const progressDelta = growthPerDay * globalMultiplier * cropWeatherMult * envMult * growthThisTick;
+    const newProgress = clamp01(oldProgress + progressDelta);
     tile.crop.progress = newProgress;
 
     const newStage = cropStage(newProgress);
     const newPercent = Math.floor(newProgress * 100);
 
     if (newStage !== oldStage || newPercent !== oldPercent) {
-      tile.dirty = true;
+      markTileDirtySafe(idx);
     }
   }
 }
 
 function updateRotAndBlack(dtMs) {
-  for (const tile of state.tiles) {
+  for (let idx = 0; idx < state.tiles.length; idx++) {
+    const tile = state.tiles[idx];
     if (tile.kind !== "field") continue;
 
     // Black tiles count down and block planting.
@@ -314,7 +322,7 @@ function updateRotAndBlack(dtMs) {
       const oldVal = tile.blackMsRemaining;
       tile.blackMsRemaining -= dtMs;
       if (tile.blackMsRemaining < 0) tile.blackMsRemaining = 0;
-      if (tile.blackMsRemaining === 0 && oldVal > 0) tile.dirty = true;
+      if (tile.blackMsRemaining === 0 && oldVal > 0) markTileDirtySafe(idx);
 
       // If a tile is black, it should never contain a crop.
       if (tile.crop) {
@@ -349,7 +357,7 @@ function updateRotAndBlack(dtMs) {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
       tile.blackMsRemaining = MS_PER_DAY;
-      tile.dirty = true;
+      markTileDirtySafe(idx);
     }
   }
 }

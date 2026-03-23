@@ -1,25 +1,30 @@
-let bgmElCache = null;
-let rainElCache = null;
-let sunElCache = null;
+let bgmElementCache = null;
+let rainElementCache = null;
+let sunAmbienceElementCache = null;
+let gameWrapElementCache = null;
+
+function isNightBgmTrackSource(src) {
+  return String(src || "").toLowerCase().includes("music-night-");
+}
 
 function getBgmBase() {
-  if (!bgmElCache) bgmElCache = document.getElementById("bgm");
-  const bgm = bgmElCache;
+  if (!bgmElementCache) bgmElementCache = document.getElementById("bgm");
+  const bgm = bgmElementCache;
   if (bgm && bgm.src) {
     // Determine the base volume by asking what track is actually playing right now.
     // This prevents the 3.0x multiplier jumping in instantly at 10pm while the day music is still fading out.
-    return bgm.src.includes("Night") ? NIGHT_BGM_MIX : DAY_BGM_MIX;
+    return isNightBgmTrackSource(bgm.src) ? NIGHT_BGM_MIX : DAY_BGM_MIX;
   }
   return (typeof isNighttime === 'function' && isNighttime()) ? NIGHT_BGM_MIX : DAY_BGM_MIX;
 }
 
 function syncWeatherAmbience() {
-  if (!bgmElCache) bgmElCache = document.getElementById("bgm");
-  if (!rainElCache) rainElCache = document.getElementById("rainSfx");
-  if (!sunElCache) sunElCache = document.getElementById("sunnySfx");
-  const bgm = bgmElCache;
-  const rain = rainElCache;
-  const sun = sunElCache;
+  if (!bgmElementCache) bgmElementCache = document.getElementById("bgm");
+  if (!rainElementCache) rainElementCache = document.getElementById("rain-sfx");
+  if (!sunAmbienceElementCache) sunAmbienceElementCache = document.getElementById("sunny-sfx");
+  const bgm = bgmElementCache;
+  const rain = rainElementCache;
+  const sun = sunAmbienceElementCache;
   if (!rain || !sun || !bgm) return;
 
   const wantRain = state.weatherId === "rain";
@@ -50,7 +55,8 @@ function syncWeatherAmbience() {
 }
 
 function setWeatherTheme() {
-  const wrap = document.querySelector(".gameWrap");
+  if (!gameWrapElementCache) gameWrapElementCache = document.querySelector(".game-wrap");
+  const wrap = gameWrapElementCache;
   if (!wrap) return;
   wrap.classList.toggle("weather--rain", state.weatherId === "rain");
   syncWeatherAmbience();

@@ -1,10 +1,10 @@
 const state = {
   day: 1,
-  msIntoDay: (9 / 24) * MS_PER_DAY,
+  dayElapsedMs: (9 / 24) * MS_PER_DAY,
   weatherId: "sun",
   weatherMachineSpendCommitted: 0,
   weatherMachineSelection: "sun",
-  money: 100,
+  moneyEur: 100,
   selectedSeedId: "carrot",
   inventory: {
     carrot: 3,
@@ -19,6 +19,7 @@ const state = {
   roosterPlayedToday: true,
   bgmFadeState: "idle",
   bgmFadeTimerMs: 0,
+  musicVolumePercent: 10,
   sunriseTransition: false,
   sunriseTransitionMsRemaining: 0,
 };
@@ -48,14 +49,14 @@ function createInitialTiles() {
 
 function exportStateToCsv() {
   const lines = [];
-  lines.push("WeathercraftFarmingCSV,3");
+  lines.push("WeathercraftFarmingCSV,4");
   lines.push(
     [
       state.day,
-      state.msIntoDay,
+      state.dayElapsedMs,
       state.weatherId,
       state.weatherMachineSelection,
-      state.money,
+      state.moneyEur,
       state.selectedSeedId,
       state.farmer.x,
       state.farmer.y,
@@ -68,18 +69,18 @@ function exportStateToCsv() {
       state.paused ? 1 : 0,
     ].join(","),
   );
-  lines.push("x,y,waterlogged,scorched,blackDaysRemaining,rotDaysRemaining,cropId,progress");
+  lines.push("x,y,waterlogged,scorched,soilRecoveryDaysRemaining,harvestRotDaysRemaining,seedTypeId,growthProgress01");
 
   for (let y = 1; y <= FIELD_SIZE; y++) {
     for (let x = 1; x <= FIELD_SIZE; x++) {
       const tile = state.tiles[tileIndex(x, y)];
       const waterlogged = tile?.waterlogged ? "1" : "0";
       const scorched = tile?.scorched ? "1" : "0";
-      const blackDaysRemaining = tile?.blackMsRemaining > 0 ? tile.blackMsRemaining / MS_PER_DAY : 0;
-      const rotDaysRemaining = tile?.readyRotMsRemaining > 0 ? tile.readyRotMsRemaining / MS_PER_DAY : 0;
-      const cropId = tile?.crop ? tile.crop.cropId : "";
-      const progress = tile?.crop ? tile.crop.progress : "";
-      lines.push([x, y, waterlogged, scorched, blackDaysRemaining, rotDaysRemaining, cropId, progress].join(","));
+      const soilRecoveryDaysRemaining = tile?.blackMsRemaining > 0 ? tile.blackMsRemaining / MS_PER_DAY : 0;
+      const harvestRotDaysRemaining = tile?.readyRotMsRemaining > 0 ? tile.readyRotMsRemaining / MS_PER_DAY : 0;
+      const seedTypeId = tile?.crop ? tile.crop.cropId : "";
+      const growthProgress01 = tile?.crop ? tile.crop.progress : "";
+      lines.push([x, y, waterlogged, scorched, soilRecoveryDaysRemaining, harvestRotDaysRemaining, seedTypeId, growthProgress01].join(","));
     }
   }
 
@@ -103,7 +104,8 @@ function importStateFromCsv(csvText) {
   if (
     csvVersion !== "WeathercraftFarmingCSV,1" &&
     csvVersion !== "WeathercraftFarmingCSV,2" &&
-    csvVersion !== "WeathercraftFarmingCSV,3"
+    csvVersion !== "WeathercraftFarmingCSV,3" &&
+    csvVersion !== "WeathercraftFarmingCSV,4"
   ) {
     throw new Error("Unrecognized CSV format.");
   }
@@ -113,14 +115,16 @@ function importStateFromCsv(csvText) {
   const legacyV2 = csvVersion === "WeathercraftFarmingCSV,2";
   if (legacyV1 && meta.length < 11) throw new Error("CSV meta row is invalid.");
   if (legacyV2 && meta.length < 13) throw new Error("CSV meta row is invalid.");
-  if (csvVersion === "WeathercraftFarmingCSV,3" && meta.length < 15) throw new Error("CSV meta row is invalid.");
+  if ((csvVersion === "WeathercraftFarmingCSV,3" || csvVersion === "WeathercraftFarmingCSV,4") && meta.length < 15) {
+    throw new Error("CSV meta row is invalid.");
+  }
 
   const [
     day,
-    msIntoDayRaw,
+    dayElapsedMsRaw,
     weatherId,
     weatherMachineSelection,
-    money,
+    moneyEur,
     selectedSeedId,
     farmerX,
     farmerY,
@@ -134,10 +138,10 @@ function importStateFromCsv(csvText) {
   ] = meta;
 
   state.day = Number(day) || 1;
-  state.msIntoDay = Number(msIntoDayRaw) || 0;
+  state.dayElapsedMs = Number(dayElapsedMsRaw) || 0;
   state.weatherId = weatherId === "rain" ? "rain" : "sun";
   state.weatherMachineSelection = weatherMachineSelection === "rain" ? "rain" : "sun";
-  state.money = Number(money) || 0;
+  state.moneyEur = Number(moneyEur) || 0;
   state.selectedSeedId = selectedSeedId && CROPS[selectedSeedId] ? selectedSeedId : "carrot";
   state.farmer.x = Number(farmerX) || 0;
   state.farmer.y = Number(farmerY) || 0;
@@ -147,9 +151,12 @@ function importStateFromCsv(csvText) {
   state.inventory.watercress = legacyV1 ? 0 : Number(invWatercress) || 0;
   state.inventory.cactusfruit = legacyV1 ? 0 : Number(invCactusfruit) || 0;
   state.weatherMachineSpendCommitted =
-    csvVersion === "WeathercraftFarmingCSV,3" ? Math.max(0, Number(metaWeatherSpend) || 0) : 0;
+    (csvVersion === "WeathercraftFarmingCSV,3" || csvVersion === "WeathercraftFarmingCSV,4")
+      ? Math.max(0, Number(metaWeatherSpend) || 0)
+      : 0;
   state.paused =
-    csvVersion === "WeathercraftFarmingCSV,3" && (metaPaused === "1" || metaPaused === "true");
+    (csvVersion === "WeathercraftFarmingCSV,3" || csvVersion === "WeathercraftFarmingCSV,4")
+      && (metaPaused === "1" || metaPaused === "true");
 
   state.tiles = createInitialTiles();
 
@@ -162,29 +169,30 @@ function importStateFromCsv(csvText) {
     if (!isField(x, y)) continue;
     const waterlogged = row[2] === "1";
     let scorched = false;
-    let blackDaysRemaining = 0;
-    let rotDaysRemaining = 0;
-    let cropId = "";
-    let progress = "";
+    let soilRecoveryDaysRemaining = 0;
+    let harvestRotDaysRemaining = 0;
+    let seedTypeId = "";
+    let growthProgress01 = "";
 
     // Supported formats:
     // - v1: x,y,waterlogged,cropId,progress
     // - v2: x,y,waterlogged,scorched,cropId,progress
     // - v3: x,y,waterlogged,scorched,blackDaysRemaining,rotDaysRemaining,cropId,progress
+    // - v4: x,y,waterlogged,scorched,soilRecoveryDaysRemaining,harvestRotDaysRemaining,seedTypeId,growthProgress01
     if (row.length >= 8) {
       scorched = row[3] === "1";
-      blackDaysRemaining = Number(row[4]) || 0;
-      rotDaysRemaining = Number(row[5]) || 0;
-      cropId = row[6];
-      progress = row[7];
+      soilRecoveryDaysRemaining = Number(row[4]) || 0;
+      harvestRotDaysRemaining = Number(row[5]) || 0;
+      seedTypeId = row[6];
+      growthProgress01 = row[7];
     } else if (row.length >= 6) {
       scorched = row[3] === "1";
-      cropId = row[4];
-      progress = row[5];
+      seedTypeId = row[4];
+      growthProgress01 = row[5];
     } else {
       scorched = false;
-      cropId = row[3];
-      progress = row[4];
+      seedTypeId = row[3];
+      growthProgress01 = row[4];
     }
 
     const tile = state.tiles[tileIndex(x, y)];
@@ -192,8 +200,8 @@ function importStateFromCsv(csvText) {
 
     tile.waterlogged = waterlogged;
     tile.scorched = scorched;
-    tile.blackMsRemaining = blackDaysRemaining > 0 ? blackDaysRemaining * MS_PER_DAY : 0;
-    tile.readyRotMsRemaining = rotDaysRemaining > 0 ? rotDaysRemaining * MS_PER_DAY : 0;
+    tile.blackMsRemaining = soilRecoveryDaysRemaining > 0 ? soilRecoveryDaysRemaining * MS_PER_DAY : 0;
+    tile.readyRotMsRemaining = harvestRotDaysRemaining > 0 ? harvestRotDaysRemaining * MS_PER_DAY : 0;
 
     // Hazards overwrite rot (waterlogged/scorched remove black/ready timers).
     if (waterlogged || scorched) {
@@ -216,28 +224,31 @@ function importStateFromCsv(csvText) {
     }
 
     // Scorched kills all crops except cactus fruit.
-    if (scorched && cropId !== "cactusfruit") {
+    if (scorched && seedTypeId !== "cactusfruit") {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
       continue;
     }
 
-    if (cropId && CROPS[cropId]) {
-      tile.crop = { cropId, progress: progress === "" ? 0 : clamp01(Number(progress) || 0) };
+    if (seedTypeId && CROPS[seedTypeId]) {
+      tile.crop = {
+        cropId: seedTypeId,
+        progress: growthProgress01 === "" ? 0 : clamp01(Number(growthProgress01) || 0),
+      };
     } else {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
     }
   }
 
-  for (const tile of state.tiles) {
-    reconcileExclusiveHazards(tile);
+  for (let idx = 0; idx < state.tiles.length; idx++) {
+    reconcileExclusiveHazards(state.tiles[idx], idx);
   }
 
   // Ensure any loaded crops obey the hazard placement rules.
   enforceHazardPlantValidity();
 
-  state.roosterPlayedToday = state.msIntoDay >= (7 / 24) * MS_PER_DAY;
+  state.roosterPlayedToday = state.dayElapsedMs >= (7 / 24) * MS_PER_DAY;
 
   setWeatherTheme();
   updateWaterAdjacency();
@@ -245,9 +256,9 @@ function importStateFromCsv(csvText) {
   updateHud();
   updateShopInfo();
   setPaused(state.paused);
-  const seedSelectEl = document.getElementById("seedSelect");
+  const seedSelectEl = document.getElementById("seed-select");
   if (seedSelectEl) seedSelectEl.value = state.selectedSeedId;
-  renderAll();
+  renderAll(true);
   updateHighlights();
 }
 
