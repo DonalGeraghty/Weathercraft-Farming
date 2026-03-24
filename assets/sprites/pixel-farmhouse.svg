@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- Pixel-art farmhouse -->
+
+  <!-- Chimney -->
+  <rect x="10" y="0" width="2" height="4" fill="#7a5a3a"/>
+  <rect x="10" y="0" width="2" height="1" fill="#5a3a1a"/>
+  <!-- Smoke puff -->
+  <rect x="9"  y="0" width="1" height="1" fill="#cccccc88"/>
+  <rect x="12" y="1" width="1" height="1" fill="#cccccc66"/>
+
+  <!-- Roof -->
+  <rect x="1"  y="5"  width="14" height="1" fill="#8B3A3A"/>
+  <rect x="2"  y="4"  width="12" height="1" fill="#A04444"/>
+  <rect x="3"  y="3"  width="10" height="1" fill="#C05050"/>
+  <rect x="4"  y="2"  width="8"  height="1" fill="#D06060"/>
+  <rect x="5"  y="1"  width="6"  height="1" fill="#E07070"/>
+  <!-- Roof overhang shadow -->
+  <rect x="1"  y="6"  width="14" height="1" fill="#6a2222"/>
+
+  <!-- Walls -->
+  <rect x="2"  y="7"  width="12" height="7" fill="#e8d8b0"/>
+  <!-- Wall shading left/right -->
+  <rect x="2"  y="7"  width="1"  height="7" fill="#c8b888"/>
+  <rect x="13" y="7"  width="1"  height="7" fill="#d0c090"/>
+  <!-- Wall top highlight -->
+  <rect x="3"  y="7"  width="10" height="1" fill="#f0e8c8"/>
+
+  <!-- Left window -->
+  <rect x="3"  y="8"  width="3"  height="3" fill="#a8d4f0"/>
+  <rect x="3"  y="8"  width="3"  height="1" fill="#7ab8e0"/>
+  <!-- Window frame -->
+  <rect x="3"  y="8"  width="1"  height="3" fill="#8a6030"/>
+  <rect x="5"  y="8"  width="1"  height="3" fill="#8a6030"/>
+  <rect x="3"  y="10" width="3"  height="1" fill="#8a6030"/>
+  <!-- Window cross -->
+  <rect x="4"  y="8"  width="1"  height="3" fill="#8a6030"/>
+
+  <!-- Right window -->
+  <rect x="10" y="8"  width="3"  height="3" fill="#a8d4f0"/>
+  <rect x="10" y="8"  width="3"  height="1" fill="#7ab8e0"/>
+  <!-- Window frame -->
+  <rect x="10" y="8"  width="1"  height="3" fill="#8a6030"/>
+  <rect x="12" y="8"  width="1"  height="3" fill="#8a6030"/>
+  <rect x="10" y="10" width="3"  height="1" fill="#8a6030"/>
+  <!-- Window cross -->
+  <rect x="11" y="8"  width="1"  height="3" fill="#8a6030"/>
+
+  <!-- Door -->
+  <rect x="6"  y="10" width="4"  height="4" fill="#5a3010"/>
+  <!-- Door frame -->
+  <rect x="6"  y="10" width="1"  height="4" fill="#7a4a20"/>
+  <rect x="9"  y="10" width="1"  height="4" fill="#7a4a20"/>
+  <rect x="6"  y="10" width="4"  height="1" fill="#7a4a20"/>
+  <!-- Door knob -->
+  <rect x="9"  y="12" width="1"  height="1" fill="#d4a830"/>
+
+  <!-- Foundation / step -->
+  <rect x="2"  y="14" width="12" height="1" fill="#a08050"/>
+  <rect x="5"  y="14" width="6"  height="1" fill="#b89060"/>
+  <rect x="1"  y="15" width="14" height="1" fill="#7a6030"/>
+</svg>

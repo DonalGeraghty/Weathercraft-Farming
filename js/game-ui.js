@@ -125,6 +125,21 @@ function buildGridDom() {
         el.appendChild(weatherMachineIcon);
       }
 
+      // Farmhouse on tile (0,0) — top-left corner, player's home
+      if (x === 0 && y === 0) {
+        const farmhouseIcon = document.createElement("img");
+        farmhouseIcon.src = "./assets/sprites/pixel-farmhouse.svg";
+        farmhouseIcon.alt = "Farmhouse";
+        farmhouseIcon.style.position = "absolute";
+        farmhouseIcon.style.inset = "5%";
+        farmhouseIcon.style.width = "90%";
+        farmhouseIcon.style.height = "90%";
+        farmhouseIcon.style.objectFit = "contain";
+        farmhouseIcon.style.imageRendering = "pixelated";
+        farmhouseIcon.style.filter = "drop-shadow(0 2px 3px rgba(0,0,0,0.4))";
+        el.appendChild(farmhouseIcon);
+      }
+
       gridEl.appendChild(el);
       tileElements[idx] = el;
 
@@ -716,6 +731,8 @@ function tryMove(dx, dy) {
   state.farmer.y = ny;
   updateHighlights();
   syncFarmerDom();
+  // Notify listeners (e.g. dog bark check) that the farmer has moved.
+  GameServices.emit("farmer:moved", { x: nx, y: ny });
 }
 
 function tryPlantHere() {
