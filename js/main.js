@@ -9,6 +9,8 @@ function initGame() {
   renderAll(true);
   updateHighlights();
   updateWaterAdjacency();
+  // ---- Dog ----
+  initDog();
 }
 
 function createRuntimeContext() {
@@ -129,6 +131,8 @@ function tick(dtMs) {
   wrapDayIfNeeded();
   runCropSimulation(dtMs);
   updateHudOnCooldown();
+  // ---- Dog ----
+  tickDog(dtMs);
 }
 
 function advanceGameClock(dtMs) {
@@ -312,5 +316,3 @@ window.GameRuntime = window.WfGameRuntime;
 window.registerAppDisposer = window.wfRegisterAppDisposer;
 window.disposeApp = window.wfDisposeApp;
 GameRuntime.start();
-
-
