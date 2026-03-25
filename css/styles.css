@@ -157,7 +157,14 @@ body{
 
 /* Square farm: fit inside .grid-viewport-wrap (viewport minus header, chrome). */
 .grid-viewport{
-  width: min(100%, min(calc(100vw - 36px), calc(100dvh - 340px)));
+  /*
+   * Fallback: subtract both sidebars (max 260px + 320px), two gaps (14px×2),
+   * app padding (18px×2), and a little breathing room so the grid never
+   * reacts to scrollbar gutter changes on the side panels.
+   * The @supports block below overrides this with precise container-query units
+   * in any browser that supports them.
+   */
+  width: min(100%, min(calc(100vw - 660px), calc(100dvh - 340px)));
   aspect-ratio: 1 / 1;
   max-width: 100%;
   max-height: 100%;
@@ -170,7 +177,7 @@ body{
 }
 @supports not (height: 100dvh){
   .grid-viewport{
-    width: min(100%, min(calc(100vw - 36px), calc(100vh - 340px)));
+    width: min(100%, min(calc(100vw - 660px), calc(100vh - 340px)));
   }
 }
 

@@ -62,6 +62,9 @@
     overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.15) transparent;
+    /* Reserves scrollbar gutter permanently so its appearance/disappearance
+       never causes a layout reflow that would resize .game-wrap. */
+    scrollbar-gutter: stable;
   }
 
   .game-wrap {
