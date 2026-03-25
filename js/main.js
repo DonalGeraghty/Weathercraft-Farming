@@ -247,6 +247,7 @@ function wrapDayIfNeeded() {
     state.dayElapsedMs -= MS_PER_DAY;
     state.day += 1;
     state.roosterPlayedToday = false;
+    resetDogMorningRoam();
   }
 }
 

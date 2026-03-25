@@ -26,6 +26,7 @@ const DOG_HOUSE_Y = 1;
 // ---- Timing constants ----
 const DOG_STEP_INTERVAL_DAYTIME_MS   = 900;  // wander: ~1 step/sec
 const DOG_STEP_INTERVAL_NIGHTTIME_MS = 600;  // hurrying home at night
+const DOG_8AM_THRESHOLD_MS = (8 / 24) * MS_PER_DAY;
 
 // Bark cooldown: don't bark again for this many ms.
 const DOG_BARK_COOLDOWN_MS = 2500;
@@ -124,6 +125,9 @@ function initDog() {
     stepTimerMs:    DOG_STEP_INTERVAL_DAYTIME_MS,
     barkCooldownMs: 0,
     isHome: true,
+    morningDestX: null,
+    morningDestY: null,
+    morningRoamDone: state.dayElapsedMs >= DOG_8AM_THRESHOLD_MS,
   };
 
   // ---- Dog-house icon on tile (0,1) ----
@@ -184,10 +188,46 @@ function initDog() {
 }
 
 // ============================================================
+//  Morning destination — picks a random tile in the 5×5 centre
+// ============================================================
+const DOG_MORNING_GRID_MIN_X = 5;
+const DOG_MORNING_GRID_MAX_X = 9;
+const DOG_MORNING_GRID_MIN_Y = 5;
+const DOG_MORNING_GRID_MAX_Y = 9;
+
+function _pickMorningDestination() {
+  // Collect valid (non-hazard) tiles from the centre 5×5 and pick one at random.
+  const candidates = [];
+  for (let y = DOG_MORNING_GRID_MIN_Y; y <= DOG_MORNING_GRID_MAX_Y; y++) {
+    for (let x = DOG_MORNING_GRID_MIN_X; x <= DOG_MORNING_GRID_MAX_X; x++) {
+      if (_isValidDogTile(x, y)) candidates.push({ x, y });
+    }
+  }
+  if (candidates.length === 0) return; // all hazards — stay put
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  _dogState.morningDestX = pick.x;
+  _dogState.morningDestY = pick.y;
+}
+
+// Reset called at midnight so the walk triggers again the next day.
+function resetDogMorningRoam() {
+  if (!_dogState) return;
+  _dogState.morningRoamDone = false;
+  _dogState.morningDestX = null;
+  _dogState.morningDestY = null;
+}
+
+// ============================================================
 //  Main tick  (called from main.js tick())
 // ============================================================
 function tickDog(dtMs) {
   if (!_dogState || state.paused) return;
+
+  // Trigger the morning walk to the centre grid once per day at 8am.
+  if (!isNighttime() && !_dogState.morningRoamDone && state.dayElapsedMs >= DOG_8AM_THRESHOLD_MS) {
+    _dogState.morningRoamDone = true;
+    _pickMorningDestination();
+  }
 
   _dogState.stepTimerMs    -= dtMs;
   _dogState.barkCooldownMs  = Math.max(0, _dogState.barkCooldownMs - dtMs);
@@ -211,9 +251,22 @@ function tickDog(dtMs) {
 
 // ============================================================
 //  Movement — wander (fix #1: no reversal)
+//  If a morning destination is set, walk toward it instead.
 // ============================================================
 function _dogWander() {
   _dogState.isHome = false;
+
+  // If we have a morning destination, walk toward it.
+  if (_dogState.morningDestX !== null) {
+    if (_dogState.x === _dogState.morningDestX && _dogState.y === _dogState.morningDestY) {
+      // Arrived — clear destination and resume normal wander.
+      _dogState.morningDestX = null;
+      _dogState.morningDestY = null;
+    } else {
+      _dogStepToward(_dogState.morningDestX, _dogState.morningDestY, false);
+      return;
+    }
+  }
 
   const reverseDx = _dogState.x - _dogState.prevX;
   const reverseDy = _dogState.y - _dogState.prevY;
@@ -248,19 +301,14 @@ function _dogWander() {
 }
 
 // ============================================================
-//  Movement — go home (fix #2: traverse any terrain)
+//  Movement — shared step-toward helper
+//  traverseAny: if true, skips terrain validity check (used for going home)
 // ============================================================
-function _dogStepTowardHome() {
-  if (_dogState.x === DOG_HOUSE_X && _dogState.y === DOG_HOUSE_Y) {
-    _dogState.isHome = true;
-    return;
-  }
-  _dogState.isHome = false;
-
-  const distX = Math.abs(DOG_HOUSE_X - _dogState.x);
-  const distY = Math.abs(DOG_HOUSE_Y - _dogState.y);
-  const dx = Math.sign(DOG_HOUSE_X - _dogState.x);
-  const dy = Math.sign(DOG_HOUSE_Y - _dogState.y);
+function _dogStepToward(destX, destY, traverseAny) {
+  const distX = Math.abs(destX - _dogState.x);
+  const distY = Math.abs(destY - _dogState.y);
+  const dx = Math.sign(destX - _dogState.x);
+  const dy = Math.sign(destY - _dogState.y);
 
   let moveX = 0, moveY = 0;
   if (distX === 0) {
@@ -272,15 +320,30 @@ function _dogStepTowardHome() {
   } else if (distY > distX) {
     moveY = dy;
   } else {
-    // Equal distance on both axes — pick randomly.
     if (Math.random() < 0.5) moveX = dx; else moveY = dy;
   }
 
-  // Fix #2: no terrain check — dog always makes it home.
-  _dogState.prevX = _dogState.x;
-  _dogState.prevY = _dogState.y;
-  _dogState.x += moveX;
-  _dogState.y += moveY;
+  const nx = _dogState.x + moveX;
+  const ny = _dogState.y + moveY;
+
+  if (traverseAny || _isValidDogTile(nx, ny)) {
+    _dogState.prevX = _dogState.x;
+    _dogState.prevY = _dogState.y;
+    _dogState.x = nx;
+    _dogState.y = ny;
+  }
+}
+
+// ============================================================
+//  Movement — go home (fix #2: traverse any terrain)
+// ============================================================
+function _dogStepTowardHome() {
+  if (_dogState.x === DOG_HOUSE_X && _dogState.y === DOG_HOUSE_Y) {
+    _dogState.isHome = true;
+    return;
+  }
+  _dogState.isHome = false;
+  _dogStepToward(DOG_HOUSE_X, DOG_HOUSE_Y, true);
 }
 
 // ============================================================

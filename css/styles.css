@@ -33,6 +33,7 @@
 
   /* Fonts */
   --font-base: "Zilla Slab", "Courier New", Courier, monospace;
+  --font-pixel: "Pixelify Sans", "Courier New", Courier, monospace;
 }
 
 /* Global Pixel Rendering */
@@ -43,7 +44,7 @@ img, .tile--path { image-rendering: pixelated; }
 .text--night { color: #b8ccff; }
 
 *{ box-sizing: border-box; }
-html, body { height: 100%; }
+/* html/body height is controlled entirely by layout.css per-breakpoint; no base height set here */
 body{
   margin: 0;
   font-family: var(--font-base);
@@ -203,7 +204,7 @@ body{
 .tile--path{
   background-color: var(--path);
   background-size: cover;
-  image-rendering: pixelated;
+  /* image-rendering: pixelated — already applied globally via `img, .tile--path` above */
 }
 .tile--field{
   background:
@@ -300,8 +301,7 @@ body{
   font-weight: 800;
   font-size: clamp(8px, 2.8vmin, 12px);
   letter-spacing: 0.2px;
-  color: rgba(0,0,0,0.65);
-  mix-blend-mode: screen;
+  color: rgba(0,0,0,0.65); /* mix-blend-mode: screen removed — it made dark text invisible on dark bg */
   display: none;
 }
 
@@ -465,7 +465,7 @@ body{
 }
 
 .inventory-item__count {
-  font-family: 'Pixelify Sans', cursive;
+  font-family: var(--font-pixel);
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
@@ -585,7 +585,7 @@ body{
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 12px;
   padding: 10px 10px;
-  color-scheme: dark;
+  color-scheme: dark; /* removed duplicate color: var(--text) */
 }
 .select:hover{
   background: #121c3a;
