@@ -1,4 +1,4 @@
-# Weathercraft Farming (prototype)
+﻿x# Weathercraft Farming (prototype)
 
 Top-down browser farming game prototype in plain HTML/CSS/JavaScript.
 
