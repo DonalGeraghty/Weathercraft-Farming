@@ -17,8 +17,6 @@ const state = {
   tiles: [],
   paused: false,
   roosterPlayedToday: true,
-  bgmFadeState: "idle",
-  bgmFadeTimerMs: 0,
   musicVolumePercent: 10,
   // Explicit user intent: true = user wants music playing. Not saved to CSV.
   // Never read bgm.paused to infer this — the browser pauses the element on src
@@ -266,4 +264,3 @@ function importStateFromCsv(csvText) {
   updateHighlights();
   if (typeof syncBodyNightClass === "function") syncBodyNightClass();
 }
-
