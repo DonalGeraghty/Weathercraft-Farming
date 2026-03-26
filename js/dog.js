@@ -1,3 +1,5 @@
+// ---- Dog state and constants ----
+
 // ============================================================
 //  dog.js  —  Roaming farm dog for Weathercraft Farming
 // ============================================================
@@ -51,54 +53,14 @@ let _farmerMoveDisposer = null; // unsubscribe handle for GameServices event
 // ============================================================
 let _barkAudioCtx = null;
 
-function _playBark() {
-  try {
-    if (!_barkAudioCtx) {
-      _barkAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    const ctx = _barkAudioCtx;
-    if (ctx.state === "suspended") ctx.resume();
+const DOG_MORNING_GRID_MIN_X = 5;
+const DOG_MORNING_GRID_MAX_X = 9;
+const DOG_MORNING_GRID_MIN_Y = 5;
+const DOG_MORNING_GRID_MAX_Y = 9;
 
-    const now = ctx.currentTime;
 
-    function makeYap(freq, startTime, duration, gain) {
-      const osc      = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(freq, startTime);
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.5, startTime + duration);
-      gainNode.gain.setValueAtTime(0, startTime);
-      gainNode.gain.linearRampToValueAtTime(gain, startTime + 0.01);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      osc.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      osc.start(startTime);
-      osc.stop(startTime + duration + 0.05);
-    }
+// ---- Public entry points ----
 
-    makeYap(480, now,        0.12, 0.28);
-    makeYap(520, now + 0.18, 0.10, 0.22);
-  } catch (_) {
-    // AudioContext unavailable — silently ignore.
-  }
-}
-
-// ============================================================
-//  Bark trigger  (shared by dog-step and farmer-move paths)
-// ============================================================
-function _triggerBarkIfOnSameTile() {
-  if (!_dogState) return;
-  if (_dogState.barkCooldownMs > 0) return;
-  if (_dogState.x === state.farmer.x && _dogState.y === state.farmer.y) {
-    _dogState.barkCooldownMs = DOG_BARK_COOLDOWN_MS;
-    _playBark();
-    _showBarkBubble();
-  }
-}
-
-// ============================================================
-//  Initialise (or re-initialise) all dog DOM & state
-// ============================================================
 function initDog() {
   // ---- Teardown any previous run (fix #5: restart leak) ----
   if (_farmerMoveDisposer) {
@@ -190,10 +152,6 @@ function initDog() {
 // ============================================================
 //  Morning destination — picks a random tile in the 5×5 centre
 // ============================================================
-const DOG_MORNING_GRID_MIN_X = 5;
-const DOG_MORNING_GRID_MAX_X = 9;
-const DOG_MORNING_GRID_MIN_Y = 5;
-const DOG_MORNING_GRID_MAX_Y = 9;
 
 function _pickMorningDestination() {
   // Collect valid (non-hazard) tiles from the centre 5×5 and pick one at random.
@@ -210,6 +168,7 @@ function _pickMorningDestination() {
 }
 
 // Reset called at midnight so the walk triggers again the next day.
+
 function resetDogMorningRoam() {
   if (!_dogState) return;
   _dogState.morningRoamDone = false;
@@ -220,6 +179,7 @@ function resetDogMorningRoam() {
 // ============================================================
 //  Main tick  (called from main.js tick())
 // ============================================================
+
 function tickDog(dtMs) {
   if (!_dogState || state.paused) return;
 
@@ -253,6 +213,9 @@ function tickDog(dtMs) {
 //  Movement — wander (fix #1: no reversal)
 //  If a morning destination is set, walk toward it instead.
 // ============================================================
+
+// ---- Movement helpers ----
+
 function _dogWander() {
   _dogState.isHome = false;
 
@@ -304,6 +267,7 @@ function _dogWander() {
 //  Movement — shared step-toward helper
 //  traverseAny: if true, skips terrain validity check (used for going home)
 // ============================================================
+
 function _dogStepToward(destX, destY, traverseAny) {
   const distX = Math.abs(destX - _dogState.x);
   const distY = Math.abs(destY - _dogState.y);
@@ -337,6 +301,7 @@ function _dogStepToward(destX, destY, traverseAny) {
 // ============================================================
 //  Movement — go home (fix #2: traverse any terrain)
 // ============================================================
+
 function _dogStepTowardHome() {
   if (_dogState.x === DOG_HOUSE_X && _dogState.y === DOG_HOUSE_Y) {
     _dogState.isHome = true;
@@ -349,6 +314,7 @@ function _dogStepTowardHome() {
 // ============================================================
 //  Helpers
 // ============================================================
+
 function _isValidDogTile(x, y) {
   if (x < 0 || y < 0 || x >= WORLD_SIZE || y >= WORLD_SIZE) return false;
   const tile = state.tiles[tileIndex(x, y)];
@@ -357,6 +323,7 @@ function _isValidDogTile(x, y) {
   if (tile.kind === "field" && (tile.waterlogged || tile.scorched || tile.blackMsRemaining > 0)) return false;
   return true;
 }
+
 
 function _shuffleDirs(arr) {
   const a = arr.slice(); // never mutate the caller's array
@@ -370,6 +337,61 @@ function _shuffleDirs(arr) {
 // ============================================================
 //  Bark bubble
 // ============================================================
+
+// ---- Bark helpers ----
+
+function _triggerBarkIfOnSameTile() {
+  if (!_dogState) return;
+  if (_dogState.barkCooldownMs > 0) return;
+  if (_dogState.x === state.farmer.x && _dogState.y === state.farmer.y) {
+    _dogState.barkCooldownMs = DOG_BARK_COOLDOWN_MS;
+    _playBark();
+    _showBarkBubble();
+  }
+}
+
+// ============================================================
+//  Initialise (or re-initialise) all dog DOM & state
+// ============================================================
+
+function _playBark() {
+  try {
+    if (!_barkAudioCtx) {
+      _barkAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const ctx = _barkAudioCtx;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const now = ctx.currentTime;
+
+    function makeYap(freq, startTime, duration, gain) {
+      const osc      = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, startTime);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.5, startTime + duration);
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(gain, startTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration + 0.05);
+    }
+
+    makeYap(480, now,        0.12, 0.28);
+    makeYap(520, now + 0.18, 0.10, 0.22);
+  } catch (_) {
+    // AudioContext unavailable — silently ignore.
+  }
+}
+
+// ============================================================
+//  Bark trigger  (shared by dog-step and farmer-move paths)
+// ============================================================
+
+// ---- DOM helpers ----
+
 function _showBarkBubble() {
   if (!_dogEl) return;
   if (!_barkBubbleEl) {
@@ -404,6 +426,7 @@ function _showBarkBubble() {
 // ============================================================
 //  DOM sync — move dog element into the correct tile
 // ============================================================
+
 function _syncDogDom() {
   if (!_dogEl || !_dogState) return;
   const idx = tileIndex(_dogState.x, _dogState.y);
@@ -417,6 +440,7 @@ function _syncDogDom() {
 // ============================================================
 //  CSS (injected once; id guard survives restarts)
 // ============================================================
+
 (function injectDogCss() {
   if (document.getElementById("dog-styles")) return;
   const style = document.createElement("style");

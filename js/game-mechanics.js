@@ -1,3 +1,5 @@
+// ---- Generic utilities ----
+
 function clamp01(value) {
   return Math.max(0, Math.min(1, value));
 }
@@ -12,11 +14,7 @@ function shuffleArrayInPlace(items) {
   return items;
 }
 
-function cropStage(progress) {
-  if (progress < 0.25) return "seed";
-  if (progress < 1) return "sprout";
-  return "grown";
-}
+// ---- Grid primitives ----
 
 function isField(x, y) {
   return x >= 1 && x <= FIELD_SIZE && y >= 1 && y <= FIELD_SIZE;
@@ -25,6 +23,16 @@ function isField(x, y) {
 function tileIndex(x, y) {
   return y * WORLD_SIZE + x;
 }
+
+// ---- Crop primitives ----
+
+function cropStage(progress) {
+  if (progress < 0.25) return "seed";
+  if (progress < 1) return "sprout";
+  return "grown";
+}
+
+// ---- Clock ----
 
 function formatTimeOfDay(dayElapsedMs) {
   const totalMinutes = Math.floor((dayElapsedMs / MS_PER_DAY) * 24 * 60);
@@ -44,6 +52,8 @@ function isNighttime() {
   const h24 = Math.floor(totalMinutes / 60) % 24;
   return h24 >= 22 || h24 < 7;
 }
+
+// ---- Weather ----
 
 function weightedChoice(items) {
   const totalWeight = items.reduce((acc, item) => acc + item.weight, 0);
@@ -91,6 +101,8 @@ function applyWeatherMachineAtSunrise() {
   // Spend is consumed at sunrise.
   state.weatherMachineSpendCommitted = 0;
 }
+
+// ---- Tile and hazard mechanics ----
 
 function isAdjacentToWaterlogged(x, y) {
   // Avoid allocations in a hot path: check 4 neighbors directly.
@@ -194,7 +206,7 @@ function enforceHazardPlantValidity() {
 
     // watercress rules:
     // - It can only exist if adjacent to waterlogged cells.
-    // - It should not be on scorched or waterlogged cells.
+    // - It should not be on scorched or waterlogged tiles.
     // (cropId === "watercress" is always true here — the only remaining possibility)
     if (tile.waterlogged || tile.scorched) {
       tile.crop = null;
@@ -259,6 +271,8 @@ function addHazardCells(type, addCount) {
 
 function addWaterloggedCells(addCount) { addHazardCells("waterlogged", addCount); }
 function addScorchedCells(addCount)    { addHazardCells("scorched",    addCount); }
+
+// ---- Crop simulation ----
 
 function growAllCrops(dtMs) {
   if (isNighttime()) return;
@@ -361,4 +375,3 @@ function updateRotAndBlack(dtMs) {
     }
   }
 }
-

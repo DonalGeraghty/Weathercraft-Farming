@@ -1,17 +1,4 @@
-function initGame() {
-  state.tiles = createInitialTiles();
-  state.weatherId = weatherForDay();
-  state.weatherMachineSelection = state.weatherId;
-  buildGridDom();
-  bindUi();
-  updateHud();
-  setWeatherTheme();
-  renderAll(true);
-  updateHighlights();
-  updateWaterAdjacency();
-  // ---- Dog ----
-  initDog();
-}
+// ---- Runtime context ----
 
 function createRuntimeContext() {
   return {
@@ -24,6 +11,8 @@ function createRuntimeContext() {
   };
 }
 let runtimeCtx = createRuntimeContext();
+
+// ---- Lifecycle helpers ----
 
 function registerAppDisposer(disposeFn) {
   if (window.WfGameRuntime?.registerDisposer) {
@@ -47,9 +36,7 @@ function disposeApp() {
   }
 }
 
-function isNightBgmTrackSourceMain(src) {
-  return String(src || "").toLowerCase().includes("music-night-");
-}
+// ---- Game loop ----
 
 function startLoop() {
   let rafId = 0;
@@ -123,6 +110,8 @@ function startLoop() {
   };
 }
 
+// ---- Tick and its sub-functions ----
+
 function tick(dtMs) {
   advanceGameClock(dtMs);
   updateSunriseTransition(dtMs);
@@ -150,6 +139,10 @@ function updateSunriseTransition(dtMs) {
       emitUiSync({ shop: true, weatherMachine: true });
     }
   }
+}
+
+function isNightBgmTrackSourceMain(src) {
+  return String(src || "").toLowerCase().includes("music-night-");
 }
 
 function updateBgmForTimeOfDay(dtMs) {
@@ -265,6 +258,25 @@ function updateHudOnCooldown() {
     emitUiSync({ hud: true });
   }
 }
+
+// ---- Game initialisation ----
+
+function initGame() {
+  state.tiles = createInitialTiles();
+  state.weatherId = weatherForDay();
+  state.weatherMachineSelection = state.weatherId;
+  buildGridDom();
+  bindUi();
+  updateHud();
+  setWeatherTheme();
+  renderAll(true);
+  updateHighlights();
+  updateWaterAdjacency();
+  // ---- Dog ----
+  initDog();
+}
+
+// ---- Runtime module ----
 
 const GameRuntime = (() => {
   let started = false;

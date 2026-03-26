@@ -26,6 +26,9 @@ let lastInventoryCounts = {};
 let lastSelectedSeedId = null;
 const uiDisposers = [];
 
+
+// ---- Lifecycle ----
+
 function addUiDisposer(disposeFn) {
   if (typeof disposeFn !== "function") return;
   uiDisposers.push(disposeFn);
@@ -33,6 +36,7 @@ function addUiDisposer(disposeFn) {
     wfRegisterAppDisposer(disposeFn);
   }
 }
+
 
 function disposeUi() {
   while (uiDisposers.length) {
@@ -44,6 +48,9 @@ function disposeUi() {
 }
 window.disposeUi = disposeUi;
 
+
+// ---- Tile dirty tracking ----
+
 function markTileDirty(idx) {
   if (idx < 0 || idx >= TILE_COUNT) return;
   dirtyTileSet.add(idx);
@@ -51,15 +58,34 @@ function markTileDirty(idx) {
   if (tile) tile.dirty = true;
 }
 
+
 function hasDirtyTiles() {
   return dirtyTileSet.size > 0;
 }
+
+
+// ---- Location queries ----
+
+function isAtShopTile() {
+  return state.farmer.x === SHOP_TILE_X && state.farmer.y === SHOP_TILE_Y;
+}
+
+
+function isAtWeatherMachineTile() {
+  return state.farmer.x === WEATHER_MACHINE_TILE_X && state.farmer.y === WEATHER_MACHINE_TILE_Y;
+}
+
+
+// ---- State helpers ----
 
 function setPaused(next) {
   state.paused = Boolean(next);
   const pauseButton = pauseButtonElement || document.getElementById("pause-btn");
   if (pauseButton) pauseButton.textContent = state.paused ? "Resume" : "Pause";
 }
+
+
+// ---- Initialisation ----
 
 function buildGridDom() {
   const gridEl = document.getElementById("grid");
@@ -203,6 +229,7 @@ function buildGridDom() {
   farmerElement.appendChild(farmerImg);
 }
 
+
 function bindUi() {
   const seedSelect = document.getElementById("seed-select");
   pauseButtonElement = document.getElementById("pause-btn");
@@ -294,13 +321,8 @@ function bindUi() {
   updateDayLengthHintUi();
 }
 
-function isAtShopTile() {
-  return state.farmer.x === SHOP_TILE_X && state.farmer.y === SHOP_TILE_Y;
-}
 
-function isAtWeatherMachineTile() {
-  return state.farmer.x === WEATHER_MACHINE_TILE_X && state.farmer.y === WEATHER_MACHINE_TILE_Y;
-}
+// ---- Setup sub-functions ----
 
 function setupSeedSelectUi(seedSelect) {
   seedSelectElementCache = seedSelect;
@@ -319,6 +341,7 @@ function setupSeedSelectUi(seedSelect) {
   seedSelect.addEventListener("change", onSeedChange);
   addUiDisposer(() => seedSelect.removeEventListener("change", onSeedChange));
 }
+
 
 function setupSeedPurchaseUi(tryBuySelectedSeed) {
   const buySeedBtn = document.getElementById("buy-seed-btn");
@@ -346,6 +369,7 @@ function setupSeedPurchaseUi(tryBuySelectedSeed) {
   }
 }
 
+
 function setupWeatherMachineUiHandlers(commitWeatherMachineSpend) {
   const sunBtn = document.getElementById("weather-machine-sun-btn");
   const rainBtn = document.getElementById("weather-machine-rain-btn");
@@ -368,6 +392,7 @@ function setupWeatherMachineUiHandlers(commitWeatherMachineSpend) {
     addUiDisposer(() => rainBtn.removeEventListener("click", onRainClick));
   }
 }
+
 
 function setupKeyboardControls(seedSelect, tryBuySelectedSeed, setHoldingPlant, setHoldingHarvest, clearHoldingPlant, clearHoldingHarvest, doMove) {
   const onKeyDown = (e) => {
@@ -426,6 +451,7 @@ function setupKeyboardControls(seedSelect, tryBuySelectedSeed, setHoldingPlant, 
   addUiDisposer(() => window.removeEventListener("keyup", onKeyUp));
 }
 
+
 function setupInventoryGridUi() {
   if (!inventoryGridElement) return;
   inventoryGridElement.innerHTML = "";
@@ -457,6 +483,7 @@ function setupInventoryGridUi() {
     lastInventoryCounts[cropId] = null;
   }
 }
+
 
 function setupSaveLoadControls() {
   const saveBtn = document.getElementById("save-csv-btn");
@@ -512,6 +539,7 @@ function setupSaveLoadControls() {
     addUiDisposer(() => loadBtn.removeEventListener("click", onLoadClick));
   }
 }
+
 
 function setupMusicControls() {
   const bgm = document.getElementById("bgm");
@@ -598,6 +626,7 @@ function setupMusicControls() {
   }
 }
 
+
 function updateDayLengthHintUi() {
   const minutesPerDay = (MS_PER_DAY / 60000).toFixed(1);
   const hintEl = document.getElementById("day-length-minutes");
@@ -605,6 +634,87 @@ function updateDayLengthHintUi() {
     hintEl.textContent = minutesPerDay;
   }
 }
+
+
+// ---- Player actions ----
+
+function tryMove(dx, dy) {
+  const nx = state.farmer.x + dx;
+  const ny = state.farmer.y + dy;
+  if (nx < 0 || ny < 0 || nx >= WORLD_SIZE || ny >= WORLD_SIZE) return;
+
+  state.farmer.x = nx;
+  state.farmer.y = ny;
+  updateHighlights();
+  syncFarmerDom();
+  // Notify listeners (e.g. dog bark check) that the farmer has moved.
+  GameServices.emit("farmer:moved", { x: nx, y: ny });
+}
+
+
+function tryPlantHere() {
+  const cropId = state.selectedSeedId;
+  const have = state.inventory[cropId] ?? 0;
+  if (have <= 0) return;
+
+  const tile = state.tiles[tileIndex(state.farmer.x, state.farmer.y)];
+  if (!tile || tile.kind !== "field") return;
+
+  // Rotted tiles are black for 1 in-game day: can't plant.
+  if (tile.blackMsRemaining > 0) return;
+
+  // Only plant if empty or already harvested (no crop).
+  if (tile.crop) return;
+
+  const x = state.farmer.x;
+  const y = state.farmer.y;
+
+  // Waterlogged tiles are never plantable.
+  if (tile.waterlogged) return;
+
+  if (cropId === "cactusfruit") {
+    // Cactus fruit can ONLY be placed on scorched earth.
+    if (!tile.scorched) return;
+  } else if (cropId === "watercress") {
+    // Watercress can ONLY be placed adjacent to waterlogged cells.
+    // It also cannot be planted on scorched/waterlogged tiles.
+    if (tile.scorched) return;
+    if (!isAdjacentToWaterlogged(x, y)) return;
+  } else {
+    // Regular crops cannot be planted on scorched earth.
+    if (tile.scorched) return;
+  }
+
+  tile.crop = { cropId, progress: 0 };
+  state.inventory[cropId] = have - 1;
+  markTileDirty(tileIndex(x, y));
+
+  emitUiSync({ shop: true, highlights: true });
+  const idx = tileIndex(state.farmer.x, state.farmer.y);
+  renderTile(idx);
+}
+
+
+function tryHarvestHere() {
+  const tile = state.tiles[tileIndex(state.farmer.x, state.farmer.y)];
+  if (!tile || tile.kind !== "field" || !tile.crop) return;
+
+  const cropDef = CROPS[tile.crop.cropId];
+  if (!cropDef) return;
+  if (tile.crop.progress < 1) return;
+
+  state.moneyEur += cropDef.harvestValue;
+  tile.crop = null;
+  tile.readyRotMsRemaining = 0;
+  tile.blackMsRemaining = 0;
+  markTileDirty(tileIndex(state.farmer.x, state.farmer.y));
+  emitUiSync({ hud: true, shop: true, highlights: true });
+  const idx = tileIndex(state.farmer.x, state.farmer.y);
+  renderTile(idx);
+}
+
+
+// ---- Update functions ----
 
 function updateWeatherMachineUi() {
   if (!weatherMachineSunButtonElement) weatherMachineSunButtonElement = document.getElementById("weather-machine-sun-btn");
@@ -639,6 +749,7 @@ function updateWeatherMachineUi() {
     }
   }
 }
+
 
 function updateShopInfo() {
   const crop = CROPS[state.selectedSeedId];
@@ -690,6 +801,7 @@ function updateShopInfo() {
   lastSelectedSeedId = state.selectedSeedId;
 }
 
+
 function updateHud() {
   if (!hudDayElement) {
     hudDayElement = document.getElementById("day-value");
@@ -732,78 +844,8 @@ function updateHud() {
   }
 }
 
-function tryMove(dx, dy) {
-  const nx = state.farmer.x + dx;
-  const ny = state.farmer.y + dy;
-  if (nx < 0 || ny < 0 || nx >= WORLD_SIZE || ny >= WORLD_SIZE) return;
 
-  state.farmer.x = nx;
-  state.farmer.y = ny;
-  updateHighlights();
-  syncFarmerDom();
-  // Notify listeners (e.g. dog bark check) that the farmer has moved.
-  GameServices.emit("farmer:moved", { x: nx, y: ny });
-}
-
-function tryPlantHere() {
-  const cropId = state.selectedSeedId;
-  const have = state.inventory[cropId] ?? 0;
-  if (have <= 0) return;
-
-  const tile = state.tiles[tileIndex(state.farmer.x, state.farmer.y)];
-  if (!tile || tile.kind !== "field") return;
-
-  // Rotted tiles are black for 1 in-game day: can't plant.
-  if (tile.blackMsRemaining > 0) return;
-
-  // Only plant if empty or already harvested (no crop).
-  if (tile.crop) return;
-
-  const x = state.farmer.x;
-  const y = state.farmer.y;
-
-  // Waterlogged tiles are never plantable.
-  if (tile.waterlogged) return;
-
-  if (cropId === "cactusfruit") {
-    // Cactus fruit can ONLY be placed on scorched earth.
-    if (!tile.scorched) return;
-  } else if (cropId === "watercress") {
-    // Watercress can ONLY be placed adjacent to waterlogged cells.
-    // It also cannot be planted on scorched/waterlogged tiles.
-    if (tile.scorched) return;
-    if (!isAdjacentToWaterlogged(x, y)) return;
-  } else {
-    // Regular crops cannot be planted on scorched earth.
-    if (tile.scorched) return;
-  }
-
-  tile.crop = { cropId, progress: 0 };
-  state.inventory[cropId] = have - 1;
-  markTileDirty(tileIndex(x, y));
-
-  emitUiSync({ shop: true, highlights: true });
-  const idx = tileIndex(state.farmer.x, state.farmer.y);
-  renderTile(idx);
-}
-
-function tryHarvestHere() {
-  const tile = state.tiles[tileIndex(state.farmer.x, state.farmer.y)];
-  if (!tile || tile.kind !== "field" || !tile.crop) return;
-
-  const cropDef = CROPS[tile.crop.cropId];
-  if (!cropDef) return;
-  if (tile.crop.progress < 1) return;
-
-  state.moneyEur += cropDef.harvestValue;
-  tile.crop = null;
-  tile.readyRotMsRemaining = 0;
-  tile.blackMsRemaining = 0;
-  markTileDirty(tileIndex(state.farmer.x, state.farmer.y));
-  emitUiSync({ hud: true, shop: true, highlights: true });
-  const idx = tileIndex(state.farmer.x, state.farmer.y);
-  renderTile(idx);
-}
+// ---- Render functions ----
 
 function syncFarmerDom() {
   if (!farmerElement) return;
@@ -814,6 +856,7 @@ function syncFarmerDom() {
   el.appendChild(farmerElement);
   lastFarmerIdx = idx;
 }
+
 
 function renderTile(idx, force = false) {
   const tile = state.tiles[idx];
@@ -867,6 +910,7 @@ function renderTile(idx, force = false) {
   }
 }
 
+
 function renderAll(force = false) {
   if (force) {
     for (let i = 0; i < state.tiles.length; i++) {
@@ -880,6 +924,7 @@ function renderAll(force = false) {
   }
   syncFarmerDom();
 }
+
 
 function updateHighlights() {
   const idx = tileIndex(state.farmer.x, state.farmer.y);
