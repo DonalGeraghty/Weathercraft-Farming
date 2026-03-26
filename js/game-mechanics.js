@@ -272,6 +272,60 @@ function addHazardCells(type, addCount) {
 function addWaterloggedCells(addCount) { addHazardCells("waterlogged", addCount); }
 function addScorchedCells(addCount)    { addHazardCells("scorched",    addCount); }
 
+/**
+ * Randomises the inner field for a new game: hazard tiles matching current weather,
+ * then a light scatter of valid crops (progress capped for variety).
+ * Must run after state.weatherId is set and before the grid DOM is built.
+ */
+function applyRandomFieldStart() {
+  const span = INITIAL_FIELD_HAZARD_MAX - INITIAL_FIELD_HAZARD_MIN + 1;
+  const hazardCount = INITIAL_FIELD_HAZARD_MIN + Math.floor(Math.random() * span);
+  if (state.weatherId === "rain") {
+    addWaterloggedCells(hazardCount);
+  } else {
+    addScorchedCells(hazardCount);
+  }
+  updateWaterAdjacency();
+
+  const indices = [];
+  for (let y = 1; y <= FIELD_SIZE; y++) {
+    for (let x = 1; x <= FIELD_SIZE; x++) {
+      indices.push(tileIndex(x, y));
+    }
+  }
+  shuffleArrayInPlace(indices);
+
+  for (const idx of indices) {
+    const tile = state.tiles[idx];
+    if (tile.crop) continue;
+    if (tile.blackMsRemaining > 0) continue;
+    if (Math.random() >= INITIAL_FIELD_CROP_FILL_CHANCE) continue;
+
+    const progress = Math.random() * INITIAL_FIELD_MAX_PROGRESS;
+
+    if (tile.waterlogged) continue;
+
+    if (tile.scorched) {
+      if (Math.random() < INITIAL_FIELD_SCORCHED_CACTUS_CHANCE) {
+        tile.crop = { cropId: "cactusfruit", progress };
+        tile.readyRotMsRemaining = 0;
+      }
+      continue;
+    }
+
+    if (tile.isAdjacentToWater && Math.random() < INITIAL_FIELD_WATERCRESS_BIAS) {
+      tile.crop = { cropId: "watercress", progress };
+    } else {
+      const basic = ["carrot", "onion", "cabbage"];
+      const cropId = basic[Math.floor(Math.random() * basic.length)];
+      tile.crop = { cropId, progress };
+    }
+    tile.readyRotMsRemaining = 0;
+  }
+
+  enforceHazardPlantValidity();
+}
+
 // ---- Crop simulation ----
 
 function growAllCrops(dtMs) {

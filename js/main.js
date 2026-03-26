@@ -265,6 +265,7 @@ function initGame() {
   state.tiles = createInitialTiles();
   state.weatherId = weatherForDay();
   state.weatherMachineSelection = state.weatherId;
+  applyRandomFieldStart();
   buildGridDom();
   bindUi();
   updateHud();

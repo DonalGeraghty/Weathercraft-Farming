@@ -85,3 +85,15 @@ const BGM_FADE_LIMIT_MS = 5000;
 const HUD_UPDATE_COOLDOWN_MS = 150;
 const WEATHER_SPEND_UNIT_EUR = 10;
 
+// Random layout on new game (see applyRandomFieldStart in game-mechanics.js).
+const INITIAL_FIELD_HAZARD_MIN = 3;
+const INITIAL_FIELD_HAZARD_MAX = 5;
+// Per eligible field tile: chance to spawn a crop where rules allow (0–1).
+const INITIAL_FIELD_CROP_FILL_CHANCE = 0.14;
+// Avoid starting many tiles at fully grown so rot timers do not all align.
+const INITIAL_FIELD_MAX_PROGRESS = 0.92;
+// On scorched tiles, chance to plant cactus fruit instead of leaving empty.
+const INITIAL_FIELD_SCORCHED_CACTUS_CHANCE = 0.55;
+// When adjacent to waterlogged tiles, bias toward watercress vs basic crops.
+const INITIAL_FIELD_WATERCRESS_BIAS = 0.45;
+
