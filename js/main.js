@@ -122,6 +122,12 @@ function tick(dtMs) {
   updateHudOnCooldown();
   // ---- Dog ----
   tickDog(dtMs);
+  syncBodyNightClass();
+}
+
+function syncBodyNightClass() {
+  const wantNight = typeof isNighttime === "function" && isNighttime();
+  document.body.classList.toggle("body--night", wantNight);
 }
 
 function advanceGameClock(dtMs) {
@@ -141,10 +147,6 @@ function updateSunriseTransition(dtMs) {
   }
 }
 
-function isNightBgmTrackSourceMain(src) {
-  return String(src || "").toLowerCase().includes("music-night-");
-}
-
 function updateBgmForTimeOfDay(dtMs) {
   if (!runtimeCtx.bgmElement) runtimeCtx.bgmElement = document.getElementById("bgm");
   const bgm = runtimeCtx.bgmElement;
@@ -155,7 +157,7 @@ function updateBgmForTimeOfDay(dtMs) {
   if (runtimeCtx.bgmSwapCheckCooldownMs <= 0) {
     runtimeCtx.bgmSwapCheckCooldownMs = BGM_SWAP_CHECK_MS;
     const wantNightSrc = isNighttime();
-    const hasNightSrc = isNightBgmTrackSourceMain(bgm.src);
+    const hasNightSrc = isNightBgmTrackSource(bgm.src);
     // Trigger fade array if a swap is needed and we are not currently transitioning
     if (wantNightSrc !== hasNightSrc && state.bgmFadeState === "idle") {
       if (wantNightSrc) {
@@ -166,7 +168,7 @@ function updateBgmForTimeOfDay(dtMs) {
         // Sunrise: Immediate snap (INTENDED: No crossfade during sunrise transition).
         // Use state.musicPlaying (user intent) not bgm.paused — setting .src pauses the
         // element per spec, making !bgm.paused unreliable as an intent check here.
-        bgm.src = "./assets/audio/music-day-01.mp3";
+        bgm.src = pickRandomBgmDayTrack();
         if (state.musicPlaying) bgm.play().catch(() => {});
       }
     }
@@ -180,7 +182,7 @@ function updateBgmForTimeOfDay(dtMs) {
     if (fadeMultiplier <= 0) {
       const wantNightSrc = isNighttime();
       // Use state.musicPlaying (user intent) not bgm.paused — same reason as above.
-      bgm.src = wantNightSrc ? "./assets/audio/music-night-01.mp3" : "./assets/audio/music-day-01.mp3";
+      bgm.src = wantNightSrc ? pickRandomBgmNightTrack() : pickRandomBgmDayTrack();
       state.bgmFadeState = "fadeIn";
       state.bgmFadeTimerMs = 0;
       if (state.musicPlaying) bgm.play().catch(() => {});
@@ -275,6 +277,7 @@ function initGame() {
   updateWaterAdjacency();
   // ---- Dog ----
   initDog();
+  syncBodyNightClass();
 }
 
 // ---- Runtime module ----

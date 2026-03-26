@@ -4,7 +4,16 @@ let sunAmbienceElementCache = null;
 let gameWrapElementCache = null;
 
 function isNightBgmTrackSource(src) {
-  return String(src || "").toLowerCase().includes("music-night-");
+  const s = String(src || "").toLowerCase();
+  return s.includes("midnight orchard swing") || s.includes("midnight%20orchard%20swing");
+}
+
+function pickRandomBgmDayTrack() {
+  return BGM_DAY_TRACKS[Math.floor(Math.random() * BGM_DAY_TRACKS.length)];
+}
+
+function pickRandomBgmNightTrack() {
+  return BGM_NIGHT_TRACKS[Math.floor(Math.random() * BGM_NIGHT_TRACKS.length)];
 }
 
 function getBgmBase() {

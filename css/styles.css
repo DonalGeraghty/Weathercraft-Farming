@@ -49,16 +49,21 @@ body{
   margin: 0;
   font-family: var(--font-base);
   font-weight: 600;
+  --wallpaper-url: url("../assets/sprites/wallpaper.png");
   background:
     radial-gradient(1200px 800px at 20% 0%, rgba(98,211,111,0.18), transparent 55%),
     radial-gradient(1000px 700px at 80% 20%, rgba(139,211,255,0.18), transparent 60%),
     linear-gradient(180deg, rgba(11,16,32,0.72), rgba(11,16,32,0.72)),
-    url("../assets/sprites/wallpaper.png");
+    var(--wallpaper-url);
   background-size: auto, auto, auto, cover;
   background-position: center, center, center, center;
   background-repeat: no-repeat;
   background-color: var(--bg); /* fallback */
   color: var(--text);
+}
+
+body.body--night{
+  --wallpaper-url: url("../assets/sprites/wallpaper%20night.png");
 }
 
 .header{

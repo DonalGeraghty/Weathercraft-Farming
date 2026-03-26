@@ -69,6 +69,16 @@ const WEATHER_CHANGE_CHANCE_PER_EURO = 0.01;
 const DAY_BGM_MIX = 0.8;
 const NIGHT_BGM_MIX = 3.0; // Boosted because the night track is mastered quietly
 
+// Day/night BGM: one track chosen at random when entering that period (see audio.js).
+const BGM_DAY_TRACKS = [
+  "./assets/audio/Cozy%20Field%20Sunrise%201.mp3",
+  "./assets/audio/Cozy%20Field%20Sunrise%202.mp3",
+];
+const BGM_NIGHT_TRACKS = [
+  "./assets/audio/Midnight%20Orchard%20Swing%201.mp3",
+  "./assets/audio/Midnight%20Orchard%20Swing%202.mp3",
+];
+
 // At each sunrise, sun/rain may flip on its own (in addition to the weather machine).
 const NATURAL_WEATHER_FLIP_CHANCE = 0.2;
 

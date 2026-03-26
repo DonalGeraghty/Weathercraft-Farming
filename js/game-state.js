@@ -264,5 +264,6 @@ function importStateFromCsv(csvText) {
   if (seedSelectEl) seedSelectEl.value = state.selectedSeedId;
   renderAll(true);
   updateHighlights();
+  if (typeof syncBodyNightClass === "function") syncBodyNightClass();
 }
 
