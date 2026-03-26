@@ -539,20 +539,26 @@ function setupMusicControls() {
     setUiPlaying(false);
     musicPauseBtn.disabled = true;
 
+    // Attempt autoplay; state.musicPlaying stays true — if the browser blocks it,
+    // the play button is available for the user to start manually.
     bgm.play().catch(() => {});
 
     const onMusicPlayClick = async () => {
+      state.musicPlaying = true;
       try {
         await bgm.play();
       } catch {
-        // Autoplay / interaction restrictions can prevent play; UI stays in paused state.
+        // Interaction restrictions can prevent play; flag stays true so the next
+        // src swap or ambience sync will attempt play() again.
       }
     };
     musicPlayBtn.addEventListener("click", onMusicPlayClick);
     addUiDisposer(() => musicPlayBtn.removeEventListener("click", onMusicPlayClick));
 
     const onMusicPauseClick = () => {
+      state.musicPlaying = false;
       bgm.pause();
+      syncWeatherAmbience();
     };
     musicPauseBtn.addEventListener("click", onMusicPauseClick);
     addUiDisposer(() => musicPauseBtn.removeEventListener("click", onMusicPauseClick));
@@ -563,6 +569,8 @@ function setupMusicControls() {
       state.musicVolumePercent = volumePercent;
       bgm.volume = clamp01((volumePercent / 100) * getBgmBase());
       bgm.muted = bgm.volume <= 0;
+      // syncWeatherAmbience recomputes ambience volumes from state.musicVolumePercent directly,
+      // so no need to call it here — the volumechange event below covers it.
     };
     musicVolumeInput.addEventListener("input", onMusicVolumeInput);
     addUiDisposer(() => musicVolumeInput.removeEventListener("input", onMusicVolumeInput));
@@ -573,7 +581,9 @@ function setupMusicControls() {
     };
     const onBgmPause = () => {
       setUiPlaying(false);
-      syncWeatherAmbience();
+      // Do not call syncWeatherAmbience here: a browser-triggered pause (e.g. from src
+      // assignment) must not silence ambience when state.musicPlaying is still true.
+      // Ambience is controlled by state.musicPlaying, not by bgm.paused.
     };
     const onBgmVolumeChange = () => {
       syncVolumeUi();

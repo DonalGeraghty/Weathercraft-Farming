@@ -171,8 +171,10 @@ function updateBgmForTimeOfDay(dtMs) {
         state.bgmFadeTimerMs = 0;
       } else {
         // Sunrise: Immediate snap (INTENDED: No crossfade during sunrise transition).
+        // Use state.musicPlaying (user intent) not bgm.paused — setting .src pauses the
+        // element per spec, making !bgm.paused unreliable as an intent check here.
         bgm.src = "./assets/audio/music-day-01.mp3";
-        if (!bgm.paused) bgm.play().catch(() => {});
+        if (state.musicPlaying) bgm.play().catch(() => {});
       }
     }
   }
@@ -184,10 +186,11 @@ function updateBgmForTimeOfDay(dtMs) {
     fadeMultiplier = 1.0 - clamp01(state.bgmFadeTimerMs / BGM_FADE_LIMIT_MS);
     if (fadeMultiplier <= 0) {
       const wantNightSrc = isNighttime();
+      // Use state.musicPlaying (user intent) not bgm.paused — same reason as above.
       bgm.src = wantNightSrc ? "./assets/audio/music-night-01.mp3" : "./assets/audio/music-day-01.mp3";
       state.bgmFadeState = "fadeIn";
       state.bgmFadeTimerMs = 0;
-      if (!bgm.paused) bgm.play().catch(() => {});
+      if (state.musicPlaying) bgm.play().catch(() => {});
     }
   } else if (state.bgmFadeState === "fadeIn") {
     state.bgmFadeTimerMs += dtMs;

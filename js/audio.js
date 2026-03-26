@@ -29,13 +29,14 @@ function syncWeatherAmbience() {
 
   const wantRain = state.weatherId === "rain";
   const wantSun = state.weatherId === "sun";
-  const musicGoing = !bgm.paused && !bgm.muted && bgm.volume > 0;
+  // Use state.musicPlaying (explicit user intent) rather than bgm.paused.
+  // bgm.paused can be true for transient browser reasons (e.g. src assignment)
+  // even when the user has not asked to stop music.
+  const musicGoing = state.musicPlaying && !bgm.muted;
 
-  // Read the original master volume before the BGM reduction
-  const base = getBgmBase();
-  const masterVol = base > 0 ? bgm.volume / base : 0;
-
-  // Set volumes independently
+  // Derive ambience volumes directly from the user's volume setting, not from
+  // bgm.volume (which is mid-transition during fades and gives wrong results).
+  const masterVol = clamp01((state.musicVolumePercent || 0) / 100);
   rain.volume = clamp01(masterVol * RAIN_SFX_MIX);
   sun.volume = clamp01(masterVol * SUN_SFX_MIX);
 

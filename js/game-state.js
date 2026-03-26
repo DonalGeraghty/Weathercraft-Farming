@@ -20,6 +20,10 @@ const state = {
   bgmFadeState: "idle",
   bgmFadeTimerMs: 0,
   musicVolumePercent: 10,
+  // Explicit user intent: true = user wants music playing. Not saved to CSV.
+  // Never read bgm.paused to infer this — the browser pauses the element on src
+  // assignment and other transient events, independent of user intent.
+  musicPlaying: true,
   sunriseTransition: false,
   sunriseTransitionMsRemaining: 0,
 };
