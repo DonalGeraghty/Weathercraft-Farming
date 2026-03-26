@@ -1,49 +1,47 @@
 @import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Pixelify+Sans:wght@400;500;600;700&display=swap');
 
+/* ==========================================================================
+   1. VARIABLES & GLOBALS
+   ========================================================================== */
 :root{
+  /* Core Colors */
+  --accent: #62d36f;
   --bg: #0b1020;
-  --panel: rgba(255,255,255,0.06);
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.72);
-  --grid-line: rgba(255,255,255,0.08);
-  --path: #2a2f3e;
+  --danger: #ff6b6b;
   --field: #2a4a2d;
   --field-alt: #2f5634;
   --focus: #8bd3ff;
-  --accent: #62d36f;
-  --danger: #ff6b6b;
+  --grid-line: rgba(255,255,255,0.08);
+  --muted: rgba(255,255,255,0.72);
+  --panel: rgba(255,255,255,0.06);
+  --path: #2a2f3e;
+  --text: rgba(255,255,255,0.92);
 
   /* Weather Colors */
-  --sun: #ffdc50;
   --rain: #8bd3ff;
+  --sun: #ffdc50;
 
   /* Hazard Colors */
-  --waterlogged-grad: linear-gradient(180deg, #0a2d7c, #05183d);
+  --scorched-border: rgba(255,230,120,0.75);
   --scorched-grad: linear-gradient(180deg, #c58a00, #6b3f00);
   --waterlogged-border: rgba(120,200,255,0.70);
-  --scorched-border: rgba(255,230,120,0.75);
+  --waterlogged-grad: linear-gradient(180deg, #0a2d7c, #05183d);
 
   /* Crop Sizes */
-  --size-seed: 31.82%;
-  --size-sprout: 54.55%;
-  --size-grown: 77.27%;
+  --size-cactus-grown: 95.45%;
   --size-cactus-seed: 40.91%;
   --size-cactus-sprout: 63.64%;
-  --size-cactus-grown: 95.45%;
+  --size-grown: 77.27%;
+  --size-seed: 31.82%;
+  --size-sprout: 54.55%;
 
   /* Fonts */
   --font-base: "Zilla Slab", "Courier New", Courier, monospace;
   --font-pixel: "Pixelify Sans", "Courier New", Courier, monospace;
 }
 
-/* Global Pixel Rendering */
-img, .tile--path { image-rendering: pixelated; }
+* { box-sizing: border-box; }
 
-.text--sun { color: var(--sun); }
-.text--rain { color: var(--rain); }
-.text--night { color: #b8ccff; }
-
-*{ box-sizing: border-box; }
 /* html/body height is controlled entirely by layout.css per-breakpoint; no base height set here */
 body{
   margin: 0;
@@ -66,73 +64,16 @@ body.body--night{
   --wallpaper-url: url("../assets/sprites/wallpaper%20night.png");
 }
 
-.header{
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 14px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.05));
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 14px;
-}
+/* Global Pixel Rendering */
+img, .tile--path { image-rendering: pixelated; }
 
-.title__name{
-  font-family: var(--font-base);
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-.title__hint{
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
+.text--sun { color: var(--sun); }
+.text--rain { color: var(--rain); }
+.text--night { color: #b8ccff; }
 
-.hud{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: flex-end;
-}
-.hud__item{
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
-  padding: 8px 10px;
-  min-width: 120px;
-  text-align: right;
-  font-family: var(--font-base);
-  font-weight: 700;
-  font-size: 18px;
-}
-.hud__label{
-  display: inline-block;
-  color: var(--muted);
-  margin-right: 8px;
-  font-size: 18px;
-  font-family: var(--font-base);
-  font-weight: 700;
-}
-.hud__item--btn{
-  min-width: 100px;
-  text-align: center;
-}
-.pause-btn{
-  width: 100%;
-}
-.hud__weather{
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.weather-icon{
-  font-size: 14px;
-  line-height: 1;
-  transform: translateY(1px);
-}
-
+/* ==========================================================================
+   2. WORLD ENGINE (Grid & Tiles)
+   ========================================================================== */
 .game-wrap{
   position: relative;
   background: var(--panel);
@@ -260,6 +201,9 @@ body.body--night{
   border-color: rgba(255,255,255,0.10) !important;
 }
 
+/* ==========================================================================
+   3. ENTITIES (Crops & Farmer)
+   ========================================================================== */
 .crop{
   position: absolute;
   left: 50%;
@@ -381,6 +325,95 @@ body.body--night{
   pointer-events: none;
 }
 
+/* ==========================================================================
+   4. INTERFACE (HUD & Panels)
+   ========================================================================== */
+.header{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.05));
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+}
+
+.title__name{
+  font-family: var(--font-base);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.title__hint{
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hud{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.hud__item{
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 8px 10px;
+  min-width: 120px;
+  text-align: right;
+  font-family: var(--font-base);
+  font-weight: 700;
+  font-size: 18px;
+}
+.hud__label{
+  display: inline-block;
+  color: var(--muted);
+  margin-right: 8px;
+  font-size: 18px;
+  font-family: var(--font-base);
+  font-weight: 700;
+}
+.hud__item--btn{
+  min-width: 100px;
+  text-align: center;
+}
+.pause-btn{
+  width: 100%;
+}
+.hud__weather{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.weather-icon{
+  font-size: 14px;
+  line-height: 1;
+  transform: translateY(1px);
+}
+
+.panel{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.card{
+  background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+  padding: 14px;
+}
+.card__title{
+  font-family: var(--font-base);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
 .legend{
   flex-shrink: 0;
   margin-top: 12px;
@@ -408,23 +441,6 @@ body.body--night{
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 10px;
-}
-
-.seed-actions{
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
-}
-.seed-actions__btns{
-  display: flex;
-  gap: 8px;
-}
-.seed-actions__btns .btn{
-  flex: 1;
-  min-width: 0;
-  padding: 10px 4px;
-  font-size: 13px;
 }
 
 .inventory-grid {
@@ -484,6 +500,7 @@ body.body--night{
   text-align: center;
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
+
 .kbd{
   font-size: 12px;
   font-weight: 700;
@@ -494,37 +511,22 @@ body.body--night{
   border-radius: 8px;
 }
 
-.panel{
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.card{
-  background: var(--panel);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 14px;
-  padding: 14px;
-}
-.card__title{
-  font-family: var(--font-base);
-  font-size: 18px;
+.btn{
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  padding: 10px 12px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
 }
-.shop-row{
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 10px;
-  align-items: center;
-  margin-top: 10px;
+.btn:disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
 }
-
-.weather-machine-row{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 8px;
+.btn--primary{
+  background: linear-gradient(180deg, rgba(98,211,111,0.35), rgba(98,211,111,0.12));
+  border-color: rgba(98,211,111,0.40);
 }
 .btn--weather{
   background: rgba(255,255,255,0.06);
@@ -551,45 +553,13 @@ body.body--night{
   transition: all 0.05s;
 }
 
-.load-row{
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
-  flex-wrap: wrap; /* allow wrapping instead of overflowing on tight screens */
-}
-.file-input{
-  flex: 1;
-  background: #0f1630;
-  color: var(--text);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 12px;
-  padding: 8px 10px;
-  min-width: 0; /* allow shrinking inside flex/grid */
-}
-
-@media (max-width: 420px){
-  .shop-row{
-    grid-template-columns: 52px 1fr;
-  }
-  .file-input{
-    padding: 8px 8px;
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 360px){
-  .load-row{
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
 .label{
   color: var(--muted);
   font-size: 13px;
   font-family: var(--font-base);
   font-weight: 700;
 }
+
 .select{
   width: 100%;
   background: #0f1630;
@@ -612,23 +582,56 @@ body.body--night{
   background: #0f1630;
   color: rgba(255,255,255,0.92);
 }
-.btn{
-  cursor: pointer;
+
+.seed-actions{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.seed-actions__btns{
+  display: flex;
+  gap: 8px;
+}
+.seed-actions__btns .btn{
+  flex: 1;
+  min-width: 0;
+  padding: 10px 4px;
+  font-size: 13px;
+}
+
+.shop-row{
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.weather-machine-row{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.load-row{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  flex-wrap: wrap; /* allow wrapping instead of overflowing on tight screens */
+}
+.file-input{
+  flex: 1;
+  background: #0f1630;
+  color: var(--text);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 12px;
-  background: rgba(255,255,255,0.06);
-  color: var(--text);
-  padding: 10px 12px;
-  font-weight: 700;
+  padding: 8px 10px;
+  min-width: 0; /* allow shrinking inside flex/grid */
 }
-.btn:disabled{
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.btn--primary{
-  background: linear-gradient(180deg, rgba(98,211,111,0.35), rgba(98,211,111,0.12));
-  border-color: rgba(98,211,111,0.40);
-}
+
 .small{
   color: var(--muted);
   font-size: 12px;
@@ -648,11 +651,9 @@ body.body--night{
   margin-top: 8px;
   flex-wrap: wrap;
 }
-
 .music-controls .btn{
   min-width: 92px;
 }
-
 .music-volume-row{
   display: grid;
   grid-template-columns: 56px 1fr auto;
@@ -660,12 +661,30 @@ body.body--night{
   align-items: center;
   margin-top: 12px;
 }
-
 .music-volume{
   width: 100%;
 }
 
-/* Weather Machine Icon Pulse */
+@media (max-width: 420px){
+  .shop-row{
+    grid-template-columns: 52px 1fr;
+  }
+  .file-input{
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px){
+  .load-row{
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ==========================================================================
+   5. SYSTEMS (Weather & Animations)
+   ========================================================================== */
 .weather-machine-icon--map {
   animation: machine-pulse 3s infinite ease-in-out;
 }
@@ -676,7 +695,6 @@ body.body--night{
   100% { transform: scale(1) translateY(0); }
 }
 
-/* Shop Icon Swaying */
 .shop-icon--map {
   transform-origin: 50% 87.5%; /* Correct anchor for the base at y=14 in the 16x16 SVG. */
   animation: shop-sway 5.7s infinite ease-in-out;
