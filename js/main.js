@@ -211,13 +211,76 @@ function tick(dtMs) {
   syncBodyNightClass();
 }
 
-// advanceGameClock, updateSunriseTransition, processSunriseIfNeeded,
-// wrapDayIfNeeded, runCropSimulation, updateHudOnCooldown,
-// syncBodyNightClass — all unchanged.
+function syncBodyNightClass() {
+  const wantNight = typeof isNighttime === "function" && isNighttime();
+  document.body.classList.toggle("body--night", wantNight);
+}
 
-// processSunriseIfNeeded: swap bgm.play() + rooster for:
-//   runtimeCtx.audio.playRooster();
-// (one-line change inside that existing function)
+function advanceGameClock(dtMs) {
+  state.dayElapsedMs += dtMs;
+  runtimeCtx.slowUiCooldownMs -= dtMs;
+}
+
+function updateSunriseTransition(dtMs) {
+  if (state.sunriseTransitionMsRemaining > 0) {
+    state.sunriseTransitionMsRemaining -= dtMs;
+    if (state.sunriseTransitionMsRemaining <= 0) {
+      state.sunriseTransitionMsRemaining = 0;
+      state.sunriseTransition = false;
+      emitUiSync({ shop: true, weatherMachine: true });
+    }
+  }
+}
+
+function processSunriseIfNeeded() {
+  if (state.roosterPlayedToday || state.dayElapsedMs < ROOSTER_THRESHOLD_MS) return;
+  state.roosterPlayedToday = true;
+  state.sunriseTransition = true;
+  state.sunriseTransitionMsRemaining = SUNRISE_TRANSITION_MS;
+
+  runtimeCtx.audio.playRooster();
+
+  const prevWeather = state.weatherId;
+  maybeChangeWeatherAtSunrise();
+  applyWeatherMachineAtSunrise();
+  emitUiSync({ weatherMachine: true });
+
+  const nextWeather = state.weatherId;
+  const isSwap = prevWeather !== nextWeather;
+
+  if (nextWeather === "rain") {
+    addWaterloggedCells(isSwap ? 3 : 5);
+  } else {
+    addScorchedCells(isSwap ? 3 : 5);
+  }
+
+  updateWaterAdjacency();
+  enforceHazardPlantValidity();
+  setWeatherTheme();
+  emitUiSync({ shop: true, highlights: true });
+  renderAll();
+}
+
+function wrapDayIfNeeded() {
+  if (state.dayElapsedMs >= MS_PER_DAY) {
+    state.dayElapsedMs -= MS_PER_DAY;
+    state.day += 1;
+    state.roosterPlayedToday = false;
+    resetDogMorningRoam();
+  }
+}
+
+function runCropSimulation(dtMs) {
+  growAllCrops(dtMs);
+  updateRotAndBlack(dtMs);
+}
+
+function updateHudOnCooldown() {
+  if (runtimeCtx.slowUiCooldownMs <= 0) {
+    runtimeCtx.slowUiCooldownMs = HUD_UPDATE_COOLDOWN_MS;
+    emitUiSync({ hud: true });
+  }
+}
 
 // ---- Game initialisation ----
 // Unchanged — initGame() still calls buildGridDom, bindUi, etc.
