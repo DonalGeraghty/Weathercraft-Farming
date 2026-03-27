@@ -117,4 +117,4 @@ const INITIAL_FIELD_MAX_PROGRESS = 0.92;
 // On scorched tiles, chance to plant cactus fruit instead of leaving empty.
 const INITIAL_FIELD_SCORCHED_CACTUS_CHANCE = 0.55;
 // When adjacent to waterlogged tiles, bias toward watercress vs basic crops.
-const INITIAL_FIELD_WATERCRESS_BIAS = 0.45;const WORLD_SIZE = 14; // includes path ring
+const INITIAL_FIELD_WATERCRESS_BIAS = 0.45;
