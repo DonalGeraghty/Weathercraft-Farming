@@ -1,3 +1,16 @@
+function initGame() {
+  state.tiles = createInitialTiles();
+  state.weatherId = weatherForDay();
+  state.weatherMachineSelection = state.weatherId;
+  buildGridDom();
+  bindUi();
+  updateHud();
+  setWeatherTheme();
+  renderAll(true);
+  updateHighlights();
+  updateWaterAdjacency();
+}
+
 // ---- Ticker ----
 // Owns the RAF loop, fixed-step accumulator, and visibility handling.
 // Knows nothing about crops, dogs, or audio.
