@@ -9,6 +9,7 @@ function initGame() {
   renderAll(true);
   updateHighlights();
   updateWaterAdjacency();
+  initDog();
 }
 
 // ---- Ticker ----
