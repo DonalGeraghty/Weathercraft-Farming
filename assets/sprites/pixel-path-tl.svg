@@ -1,11 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
-  <!-- Top-Left Corner (0, 0) -->
-  <rect x="0" y="0" width="16" height="16" fill="#242936"/>
-  <rect x="4" y="4" width="12" height="12" fill="#2e3445"/>
-  <rect x="4" y="4" width="8" height="8" fill="#2e3445"/>
-  <!-- Rounding the inner corner slightly -->
-  <rect x="4" y="4" width="1" height="1" fill="#242936"/>
-  <!-- Rocks on the outer boundary -->
-  <rect x="1" y="2" width="2" height="2" fill="#3a3f55"/>
-  <rect x="2" y="1" width="2" height="2" fill="#3a3f55"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <rect x="0" y="0" width="32" height="32" fill="#242936"/>
+  <rect x="8" y="8" width="24" height="24" fill="#2e3445"/>
+  <rect x="8" y="8" width="2" height="2" fill="#242936"/>
+  <rect x="2" y="4" width="4" height="4" fill="#3a3f55"/>
+  <rect x="4" y="2" width="4" height="4" fill="#3a3f55"/>
 </svg>

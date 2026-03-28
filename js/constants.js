@@ -110,6 +110,17 @@ const HUD_UPDATE_COOLDOWN_MS = 150;
 
 const EVENT_FARMER_MOVED = "farmer:moved";
 
+// ---- Buildings ----
+
+const FARMHOUSE_TILE_X = 0;
+const FARMHOUSE_TILE_Y = 0;
+
+const BUILDINGS = [
+  { id: "farmhouse",      name: "Farmhouse",       tileX: FARMHOUSE_TILE_X,       tileY: FARMHOUSE_TILE_Y },
+  { id: "shop",           name: "Seed Shop",        tileX: SHOP_TILE_X,            tileY: SHOP_TILE_Y },
+  { id: "weatherMachine", name: "Weather Machine",  tileX: WEATHER_MACHINE_TILE_X, tileY: WEATHER_MACHINE_TILE_Y },
+];
+
 // ---- Initial field generation ----
 // See applyRandomFieldStart in game-mechanics.js.
 

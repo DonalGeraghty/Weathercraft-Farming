@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- Plank 1 -->
+  <rect x="0" y="0" width="32" height="2" fill="#E07828"/>
+  <rect x="0" y="2" width="32" height="4" fill="#CC6018"/>
+  <rect x="0" y="6" width="32" height="2" fill="#A84C12"/>
+  <rect x="0" y="8" width="32" height="2" fill="#7A320A"/>
+  <!-- Nail left -->
+  <rect x="4" y="2" width="6" height="6" fill="#3C1404"/>
+  <rect x="6" y="4" width="2" height="2" fill="#C05828"/>
+  <!-- Nail right -->
+  <rect x="22" y="2" width="6" height="6" fill="#3C1404"/>
+  <rect x="24" y="4" width="2" height="2" fill="#C05828"/>
+  <!-- Mortar -->
+  <rect x="0" y="10" width="32" height="2" fill="#200A02"/>
+  <!-- Plank 2 -->
+  <rect x="0" y="12" width="32" height="2" fill="#D87220"/>
+  <rect x="0" y="14" width="32" height="4" fill="#C85E16"/>
+  <rect x="0" y="18" width="32" height="2" fill="#A44A10"/>
+  <rect x="0" y="20" width="32" height="2" fill="#7A320A"/>
+  <!-- Nail center -->
+  <rect x="14" y="14" width="6" height="6" fill="#3C1404"/>
+  <rect x="16" y="16" width="2" height="2" fill="#C05828"/>
+  <!-- Mortar -->
+  <rect x="0" y="22" width="32" height="2" fill="#200A02"/>
+  <!-- Plank 3 -->
+  <rect x="0" y="24" width="32" height="2" fill="#E07828"/>
+  <rect x="0" y="26" width="32" height="4" fill="#CC6018"/>
+  <rect x="0" y="30" width="32" height="2" fill="#7A320A"/>
+  <!-- Nail left -->
+  <rect x="4" y="26" width="6" height="4" fill="#3C1404"/>
+  <rect x="6" y="26" width="2" height="2" fill="#C05828"/>
+  <!-- Nail right -->
+  <rect x="22" y="26" width="6" height="4" fill="#3C1404"/>
+  <rect x="24" y="26" width="2" height="2" fill="#C05828"/>
+</svg>

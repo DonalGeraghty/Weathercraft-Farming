@@ -1,12 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
   <!-- small stem -->
-  <rect x="7" y="6" width="2" height="5" fill="#2f8f3a" opacity="0.95" />
-  <rect x="6" y="6" width="1" height="2" fill="#1f6f2a" opacity="0.9" />
-  <rect x="9" y="6" width="1" height="2" fill="#1f6f2a" opacity="0.9" />
-
+  <rect x="14" y="12" width="4" height="10" fill="#2f8f3a" opacity="0.95" />
+  <rect x="12" y="12" width="2" height="4" fill="#1f6f2a" opacity="0.9" />
+  <rect x="18" y="12" width="2" height="4" fill="#1f6f2a" opacity="0.9" />
   <!-- bulb -->
-  <rect x="6" y="8" width="4" height="4" fill="#f0d5ff" />
-  <rect x="6" y="8" width="1" height="4" fill="#7a4ac2" opacity="0.9" />
-  <rect x="9" y="8" width="1" height="4" fill="#7a4ac2" opacity="0.9" />
-  <rect x="7" y="9" width="2" height="1" fill="#ffffff" opacity="0.55" />
+  <rect x="12" y="16" width="8" height="8" fill="#f0d5ff" />
+  <rect x="12" y="16" width="2" height="8" fill="#7a4ac2" opacity="0.9" />
+  <rect x="18" y="16" width="2" height="8" fill="#7a4ac2" opacity="0.9" />
+  <rect x="14" y="18" width="4" height="2" fill="#ffffff" opacity="0.55" />
 </svg>

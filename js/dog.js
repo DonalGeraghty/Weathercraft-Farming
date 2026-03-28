@@ -311,6 +311,7 @@ function _shuffleDirs(arr) {
 function _triggerBarkIfOnSameTile() {
   if (!_dogState) return;
   if (_dogState.barkCooldownMs > 0) return;
+  if (typeof isBuildingInteriorVisible === "function" && isBuildingInteriorVisible()) return;
   if (_dogState.x === state.farmer.x && _dogState.y === state.farmer.y) {
     _dogState.barkCooldownMs = DOG_BARK_COOLDOWN_MS;
     _playBark();

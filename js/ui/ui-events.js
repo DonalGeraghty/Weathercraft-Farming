@@ -52,6 +52,8 @@ function bindUi() {
     if (state.farmer.x !== prevX || state.farmer.y !== prevY) {
       maybeHarvestAndPlant();
       emitUiSync({ shop: true, weatherMachine: true });
+      const building = getBuildingAtFarmer();
+      if (building) showBuildingInterior(building);
     }
   }
 
@@ -169,7 +171,38 @@ function setupKeyboardControls(seedSelect, tryBuySelectedSeed, setHoldingPlant, 
       return;
     }
 
+    // Building interior navigation (works even while paused).
+    if (key === "f" || key === "escape") {
+      if (isBuildingInteriorVisible()) {
+        // F only exits when standing on the door tile; Escape always exits.
+        if (key === "escape" || isAtRoomExit()) {
+          hideBuildingInterior();
+        }
+        return;
+      }
+      if (key === "f" && !state.paused) {
+        const building = getBuildingAtFarmer();
+        if (building) {
+          showBuildingInterior(building);
+          return;
+        }
+      }
+      return;
+    }
+
     if (state.paused) return;
+
+    // Route movement into the room when inside a building
+    if (isBuildingInteriorVisible()) {
+      if (["w", "arrowup", "a", "arrowleft", "s", "arrowdown", "d", "arrowright"].includes(key)) {
+        e.preventDefault();
+        if (key === "w" || key === "arrowup")    tryMoveInRoom(0, -1);
+        if (key === "a" || key === "arrowleft")  tryMoveInRoom(-1, 0);
+        if (key === "s" || key === "arrowdown")  tryMoveInRoom(0,  1);
+        if (key === "d" || key === "arrowright") tryMoveInRoom(1,  0);
+      }
+      return; // block all other input while inside
+    }
 
     const activeTag = (document.activeElement?.tagName ?? "").toLowerCase();
     const isTyping = ["input", "textarea", "select"].includes(activeTag);

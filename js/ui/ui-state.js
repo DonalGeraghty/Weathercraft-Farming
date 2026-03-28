@@ -24,6 +24,12 @@ function isAtWeatherMachineTile() {
   return state.farmer.x === WEATHER_MACHINE_TILE_X && state.farmer.y === WEATHER_MACHINE_TILE_Y;
 }
 
+function getBuildingAtFarmer() {
+  const fx = state.farmer.x;
+  const fy = state.farmer.y;
+  return BUILDINGS.find(b => b.tileX === fx && b.tileY === fy) ?? null;
+}
+
 
 // ---- State helpers ----
 

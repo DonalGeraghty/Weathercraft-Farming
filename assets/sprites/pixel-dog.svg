@@ -1,61 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges">
-
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
   <!-- Curled tail -->
-  <rect x="1" y="8" width="1" height="1" fill="#4a7ab5"/>
-  <rect x="1" y="7" width="1" height="1" fill="#4a7ab5"/>
-  <rect x="2" y="6" width="1" height="1" fill="#4a7ab5"/>
-  <rect x="3" y="5" width="1" height="1" fill="#3a66a0"/>
-  <rect x="3" y="6" width="1" height="1" fill="#4a7ab5"/>
-
-  <!-- Body (steel blue saddle) -->
-  <rect x="3" y="7" width="7" height="4" fill="#3a66a0"/>
-  <rect x="4" y="6" width="5" height="1" fill="#4a7ab5"/>
-
-  <!-- Tan chest / underside -->
-  <rect x="5" y="8" width="3" height="3" fill="#c8882a"/>
-
+  <rect x="2" y="16" width="2" height="2" fill="#4a7ab5"/>
+  <rect x="2" y="14" width="2" height="2" fill="#4a7ab5"/>
+  <rect x="4" y="12" width="2" height="2" fill="#4a7ab5"/>
+  <rect x="6" y="10" width="2" height="2" fill="#3a66a0"/>
+  <rect x="6" y="12" width="2" height="2" fill="#4a7ab5"/>
+  <!-- Body -->
+  <rect x="6" y="14" width="14" height="8" fill="#3a66a0"/>
+  <rect x="8" y="12" width="10" height="2" fill="#4a7ab5"/>
+  <!-- Tan chest -->
+  <rect x="10" y="16" width="6" height="6" fill="#c8882a"/>
   <!-- Neck -->
-  <rect x="9" y="6" width="2" height="3" fill="#c8882a"/>
-
+  <rect x="18" y="12" width="4" height="6" fill="#c8882a"/>
   <!-- Head -->
-  <rect x="10" y="3" width="4" height="4" fill="#c8882a"/>
-  <rect x="10" y="3" width="4" height="1" fill="#b87828"/>
-
+  <rect x="20" y="6" width="8" height="8" fill="#c8882a"/>
+  <rect x="20" y="6" width="8" height="2" fill="#b87828"/>
   <!-- Drop ears -->
-  <rect x="10" y="2" width="1" height="3" fill="#b87828"/>
-  <rect x="13" y="2" width="1" height="3" fill="#b87828"/>
-  <rect x="10" y="3" width="1" height="2" fill="#8a5510"/>
-  <rect x="13" y="3" width="1" height="2" fill="#8a5510"/>
-
+  <rect x="20" y="4" width="2" height="6" fill="#b87828"/>
+  <rect x="26" y="4" width="2" height="6" fill="#b87828"/>
+  <rect x="20" y="6" width="2" height="4" fill="#8a5510"/>
+  <rect x="26" y="6" width="2" height="4" fill="#8a5510"/>
   <!-- Topknot tuft -->
-  <rect x="11" y="2" width="2" height="1" fill="#c8882a"/>
-  <rect x="11" y="1" width="1" height="1" fill="#d49850"/>
-  <rect x="12" y="1" width="1" height="2" fill="#c8882a"/>
-
+  <rect x="22" y="4" width="4" height="2" fill="#c8882a"/>
+  <rect x="22" y="2" width="2" height="2" fill="#d49850"/>
+  <rect x="24" y="2" width="2" height="4" fill="#c8882a"/>
   <!-- Eye -->
-  <rect x="12" y="5" width="1" height="1" fill="#120a04"/>
-
+  <rect x="24" y="10" width="2" height="2" fill="#120a04"/>
   <!-- Muzzle -->
-  <rect x="13" y="5" width="2" height="2" fill="#e8b060"/>
+  <rect x="26" y="10" width="4" height="4" fill="#e8b060"/>
   <!-- Nose -->
-  <rect x="14" y="5" width="1" height="1" fill="#120a04"/>
+  <rect x="28" y="10" width="2" height="2" fill="#120a04"/>
   <!-- Mouth -->
-  <rect x="14" y="6" width="1" height="1" fill="#d09048"/>
-
+  <rect x="28" y="12" width="2" height="2" fill="#d09048"/>
   <!-- Front legs -->
-  <rect x="9"  y="11" width="1" height="3" fill="#c8882a"/>
-  <rect x="10" y="11" width="1" height="3" fill="#b87828"/>
+  <rect x="18" y="22" width="2" height="6" fill="#c8882a"/>
+  <rect x="20" y="22" width="2" height="6" fill="#b87828"/>
   <!-- Front paws -->
-  <rect x="9"  y="13" width="2" height="1" fill="#8a5510"/>
-
+  <rect x="18" y="26" width="4" height="2" fill="#8a5510"/>
   <!-- Back legs -->
-  <rect x="4" y="11" width="1" height="3" fill="#c8882a"/>
-  <rect x="6" y="11" width="1" height="3" fill="#c8882a"/>
+  <rect x="8" y="22" width="2" height="6" fill="#c8882a"/>
+  <rect x="12" y="22" width="2" height="6" fill="#c8882a"/>
   <!-- Back paws -->
-  <rect x="3" y="13" width="2" height="1" fill="#8a5510"/>
-  <rect x="6" y="13" width="2" height="1" fill="#8a5510"/>
-
+  <rect x="6" y="26" width="4" height="2" fill="#8a5510"/>
+  <rect x="12" y="26" width="4" height="2" fill="#8a5510"/>
   <!-- Shadow -->
-  <rect x="3" y="14" width="10" height="1" fill="#22222230"/>
-
+  <rect x="6" y="28" width="20" height="2" fill="#22222230"/>
 </svg>

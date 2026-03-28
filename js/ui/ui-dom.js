@@ -23,6 +23,7 @@ let pauseButtonElement;
 let inventoryItemElements = {};
 let inventoryCountElements = {};
 let lastInventoryCounts = {};
+let buildingInteriorElement = null;
 
 
 // ---- Initialisation ----
@@ -158,6 +159,9 @@ function buildGridDom() {
     }
   }
 
+  // Building interior overlay element (cached on first use).
+  buildingInteriorElement = document.getElementById("building-interior");
+
   // Create a single farmer element; we move it between tiles on demand.
   farmerElement = document.createElement("div");
   farmerElement.className = "farmer";
@@ -166,4 +170,127 @@ function buildGridDom() {
   farmerImg.alt = "Pixel farmer";
   farmerImg.src = "./assets/sprites/pixel-farmer.svg";
   farmerElement.appendChild(farmerImg);
+}
+
+
+// ---- Building interior overlay ----
+
+const ROOM_SIZE   = 9;
+const ROOM_DOOR_X = Math.floor(ROOM_SIZE / 2);  // 4 — centre of bottom row
+const ROOM_DOOR_Y = ROOM_SIZE - 1;               // 8
+
+const FLOOR_SPRITES = [
+  "pixel-floor-interior.svg",
+  "pixel-floor-interior-2.svg",
+  "pixel-floor-interior-3.svg",
+  "pixel-floor-interior-4.svg",
+  "pixel-floor-interior-5.svg",
+  "pixel-floor-interior-6.svg",
+];
+
+// Deterministic sprite selection so the floor looks the same every visit.
+function floorSpriteForTile(x, y, buildingId) {
+  if (buildingId === "farmhouse") return FLOOR_SPRITES[0];
+  return FLOOR_SPRITES[((x * 5 + y * 3) ^ (x + y * 7)) % FLOOR_SPRITES.length];
+}
+
+function isRoomWall(x, y) {
+  const onBorder = x === 0 || x === ROOM_SIZE - 1 || y === 0 || y === ROOM_SIZE - 1;
+  return onBorder && !(x === ROOM_DOOR_X && y === ROOM_DOOR_Y);
+}
+
+function isAtRoomExit() {
+  return roomFarmerX === ROOM_DOOR_X && roomFarmerY === ROOM_DOOR_Y;
+}
+
+let roomTileElements = [];   // flat array [y * ROOM_SIZE + x], length 81
+let roomFarmerX = ROOM_DOOR_X;
+let roomFarmerY = ROOM_DOOR_Y - 1;
+let roomFarmerTileIdx = -1;
+
+function showBuildingInterior(building) {
+  if (!buildingInteriorElement) return;
+
+  const nameEl = document.getElementById("building-interior-name");
+  const contentEl = document.getElementById("building-interior-content");
+  if (nameEl) nameEl.textContent = building.name;
+
+  if (contentEl) {
+    contentEl.innerHTML = "";
+    contentEl.appendChild(buildRoomGrid(building.id));
+  }
+
+  // Hide farmer on the playfield while inside a building
+  if (farmerElement) farmerElement.hidden = true;
+
+  // Start farmer on the entry/exit square
+  roomFarmerX = ROOM_DOOR_X;
+  roomFarmerY = ROOM_DOOR_Y;
+  roomFarmerTileIdx = -1;
+  placeRoomFarmer();
+
+  buildingInteriorElement.hidden = false;
+}
+
+function hideBuildingInterior() {
+  if (!buildingInteriorElement) return;
+  buildingInteriorElement.hidden = true;
+  // Restore farmer on the playfield
+  if (farmerElement) farmerElement.hidden = false;
+}
+
+function isBuildingInteriorVisible() {
+  return buildingInteriorElement ? !buildingInteriorElement.hidden : false;
+}
+
+function buildRoomGrid(buildingId) {
+  const grid = document.createElement("div");
+  grid.className = "interior-room";
+  roomTileElements = [];
+
+  for (let y = 0; y < ROOM_SIZE; y++) {
+    for (let x = 0; x < ROOM_SIZE; x++) {
+      const tile = document.createElement("div");
+      if (isRoomWall(x, y)) {
+        tile.className = "interior-room__tile interior-room__tile--wall";
+      } else {
+        tile.className = "interior-room__tile interior-room__tile--floor";
+        tile.style.backgroundImage = `url('./assets/sprites/${floorSpriteForTile(x, y, buildingId)}')`;
+      }
+      grid.appendChild(tile);
+      roomTileElements.push(tile);
+    }
+  }
+
+  return grid;
+}
+
+function placeRoomFarmer() {
+  // Remove farmer image from previous tile
+  if (roomFarmerTileIdx >= 0 && roomTileElements[roomFarmerTileIdx]) {
+    const prev = roomTileElements[roomFarmerTileIdx].querySelector(".interior-farmer");
+    if (prev) prev.remove();
+  }
+
+  const idx = roomFarmerY * ROOM_SIZE + roomFarmerX;
+  roomFarmerTileIdx = idx;
+  const tile = roomTileElements[idx];
+  if (!tile) return;
+
+  const img = document.createElement("img");
+  img.src = "./assets/sprites/pixel-farmer.svg";
+  img.className = "interior-farmer";
+  img.alt = "Farmer";
+  tile.appendChild(img);
+}
+
+function tryMoveInRoom(dx, dy) {
+  const nx = roomFarmerX + dx;
+  const ny = roomFarmerY + dy;
+  if (nx < 0 || nx >= ROOM_SIZE || ny < 0 || ny >= ROOM_SIZE) return;
+  if (isRoomWall(nx, ny)) return;
+  roomFarmerX = nx;
+  roomFarmerY = ny;
+  placeRoomFarmer();
+  if (isAtRoomExit()) hideBuildingInterior();
 }

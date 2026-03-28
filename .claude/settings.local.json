@@ -16,7 +16,8 @@
       "Bash(pip install:*)",
       "Bash(python -c \":*)",
       "Bash(python -c \"import os; print\\(os.listdir\\(''assets/sprites''\\)\\)\")",
-      "Bash(python -c \"import os; files=[f for f in os.listdir\\(''assets/sprites''\\) if ''Gemini'' in f or ''gemini'' in f]; print\\(files\\)\")"
+      "Bash(python -c \"import os; files=[f for f in os.listdir\\(''assets/sprites''\\) if ''Gemini'' in f or ''gemini'' in f]; print\\(files\\)\")",
+      "Bash(python3 -c \"from PIL import Image; img = Image.open\\(''C:/Users/conal/Desktop/Weathercraft-Farming/assets/sprites/characters.png''\\); print\\(''characters.png:'', img.size\\)\")"
     ]
   }
 }

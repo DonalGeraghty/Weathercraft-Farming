@@ -1,17 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
   <!-- base -->
-  <rect x="6" y="14" width="4" height="1" fill="#1b1325" opacity="0.65" />
-
+  <rect x="12" y="28" width="8" height="2" fill="#1b1325" opacity="0.65" />
   <!-- stem -->
-  <rect x="7" y="4" width="2" height="10" fill="#2f8f7a" />
-
+  <rect x="14" y="8" width="4" height="20" fill="#2f8f7a" />
   <!-- leaf clusters -->
-  <rect x="3" y="6" width="5" height="2" fill="#37e6d2" />
-  <rect x="8" y="6" width="5" height="2" fill="#37e6d2" />
-  <rect x="4" y="8" width="4" height="2" fill="#1ecbb3" opacity="0.95" />
-  <rect x="8" y="8" width="4" height="2" fill="#1ecbb3" opacity="0.95" />
-
+  <rect x="6" y="12" width="10" height="4" fill="#37e6d2" />
+  <rect x="16" y="12" width="10" height="4" fill="#37e6d2" />
+  <rect x="8" y="16" width="8" height="4" fill="#1ecbb3" opacity="0.95" />
+  <rect x="16" y="16" width="8" height="4" fill="#1ecbb3" opacity="0.95" />
   <!-- tips -->
-  <rect x="5" y="5" width="1" height="1" fill="#6ff6e6" />
-  <rect x="10" y="5" width="1" height="1" fill="#6ff6e6" />
+  <rect x="10" y="10" width="2" height="2" fill="#6ff6e6" />
+  <rect x="20" y="10" width="2" height="2" fill="#6ff6e6" />
 </svg>

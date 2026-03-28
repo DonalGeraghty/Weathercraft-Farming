@@ -79,6 +79,13 @@
               <div id="grid" class="grid" role="grid" aria-label="Farm grid"></div>
             </div>
           </div>
+          <div id="building-interior" class="building-interior" hidden role="dialog" aria-modal="true" aria-labelledby="building-interior-name">
+            <div class="building-interior__header">
+              <span id="building-interior-name" class="building-interior__name"></span>
+              <span class="building-interior__hint"><kbd class="kbd">F</kbd> / <kbd class="kbd">Esc</kbd> &mdash; Leave</span>
+            </div>
+            <div id="building-interior-content" class="building-interior__content"></div>
+          </div>
         </section>
 
         <aside class="panel panel--right" aria-label="Shop and weather">
@@ -123,6 +130,7 @@
               <div class="legend__row"><span class="kbd">B</span> Buy 1</div>
               <div class="legend__row"><span class="kbd">N</span> Buy 5</div>
               <div class="legend__row"><span class="kbd">M</span> Buy 10</div>
+              <div class="legend__row"><span class="kbd">F</span> Enter building</div>
             </div>
           </div>
         </aside>

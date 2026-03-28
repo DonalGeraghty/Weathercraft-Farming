@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
   <!-- seed -->
-  <rect x="6" y="9" width="4" height="3" fill="#2b5fd5" opacity="0.15" />
-  <rect x="6" y="8" width="4" height="6" fill="#2f8f3a" opacity="0.8" />
-  <rect x="7" y="9" width="2" height="4" fill="#7dff86" />
+  <rect x="12" y="18" width="8" height="6" fill="#2b5fd5" opacity="0.15" />
+  <rect x="12" y="16" width="8" height="12" fill="#2f8f3a" opacity="0.8" />
+  <rect x="14" y="18" width="4" height="8" fill="#7dff86" />
 </svg>
