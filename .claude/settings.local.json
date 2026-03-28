@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv \"Cozy Field Sunrise 1.mp3\" \"music-cozy-field-sunrise-01.mp3\")",
+      "Bash(mv \"Cozy Field Sunrise 2.mp3\" \"music-cozy-field-sunrise-02.mp3\")",
+      "Bash(mv \"Midnight Orchard Swing 1.mp3\" \"music-midnight-orchard-swing-01.mp3\")",
+      "Bash(mv \"Midnight Orchard Swing 2.mp3\" \"music-midnight-orchard-swing-02.mp3\")",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(for file:*)",
+      "Bash(do)",
+      "Bash(echo \"Testing js/ui/$file.js:\")",
+      "Bash(curl -s -o /dev/null -w \"  Status: %{http_code}\\\\n\" http://localhost:8000/js/ui/$file.js)",
+      "Bash(done)",
+      "Bash(wc -l /c/Users/conal/Desktop/Weathercraft-Farming/js/ui/*.js)"
+    ]
+  }
+}

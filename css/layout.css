@@ -50,7 +50,7 @@
 
   .main {
     flex: 1;
-    /* min-height: 0 removed — already the browser default for flex children */
+    min-height: 0; /* Required: browser default is min-height:auto, not 0; without this .main can grow taller than the viewport when panel content is large */
     align-items: stretch;
   }
 

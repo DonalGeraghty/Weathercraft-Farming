@@ -85,12 +85,14 @@ const NIGHT_BGM_MIX = 3.0; // Boosted because the night track is mastered quietl
 
 // Day/night BGM: one track chosen at random when entering that period (see audio.js).
 const BGM_DAY_TRACKS = [
-  "./assets/audio/Cozy%20Field%20Sunrise%201.mp3",
-  "./assets/audio/Cozy%20Field%20Sunrise%202.mp3",
+  "./assets/audio/music-cozy-field-sunrise-01.mp3",
+  "./assets/audio/music-cozy-field-sunrise-02.mp3",
+  "./assets/audio/music-day-01.mp3",
 ];
 const BGM_NIGHT_TRACKS = [
-  "./assets/audio/Midnight%20Orchard%20Swing%201.mp3",
-  "./assets/audio/Midnight%20Orchard%20Swing%202.mp3",
+  "./assets/audio/music-midnight-orchard-swing-01.mp3",
+  "./assets/audio/music-midnight-orchard-swing-02.mp3",
+  "./assets/audio/music-night-01.mp3",
 ];
 
 // Rain/sun ambience loudness relative to the BGM volume slider (0–1 each).

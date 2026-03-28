@@ -131,7 +131,7 @@
 
     <audio
       id="bgm"
-      src="./assets/audio/Cozy%20Field%20Sunrise%201.mp3"
+      src="./assets/audio/music-cozy-field-sunrise-01.mp3"
       preload="auto"
       loop
       aria-hidden="true"
@@ -162,7 +162,14 @@
     <script src="./js/game-state.js" defer></script>
     <script src="./js/game-services.js" defer></script>
     <script src="./js/audio.js" defer></script>
-    <script src="./js/game-ui.js" defer></script>
+    <!-- UI Module (in dependency order) -->
+    <script src="./js/ui/ui-lifecycle.js" defer></script>
+    <script src="./js/ui/ui-dom.js" defer></script>
+    <script src="./js/ui/ui-state.js" defer></script>
+    <script src="./js/ui/ui-actions.js" defer></script>
+    <script src="./js/ui/ui-render.js" defer></script>
+    <script src="./js/ui/ui-updates.js" defer></script>
+    <script src="./js/ui/ui-events.js" defer></script>
     <script src="./js/dog.js" defer></script>
     <script src="./js/main.js" defer></script>
   </body>

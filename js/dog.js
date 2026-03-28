@@ -1,8 +1,6 @@
 // ---- Dog state and constants ----
 
-// ============================================================
 //  dog.js  —  Roaming farm dog for Weathercraft Farming
-// ============================================================
 //
 //  Behaviour:
 //   • Daytime  : wanders randomly around the farm, never reversing.
@@ -10,16 +8,8 @@
 //   • Barks    : when the dog steps onto the farmer's tile, OR when the
 //                farmer steps onto the dog's tile (via farmer-move event).
 //
-//  Fixes applied:
-//   1. _dogWander()          — never reverses direction.
-//   2. _dogStepTowardHome()  — traverses any terrain (no validity check).
-//   3. _checkBark()          — also fires via GameServices farmer:moved event.
-//   4. barkAudioElement      — dead variable removed; Web Audio used directly.
-//   5. Restart leak          — DOM elements nulled and re-created on initDog().
-//
 //  Requires: constants.js, game-mechanics.js, game-state.js,
 //            game-services.js to be loaded first.
-// ============================================================
 
 // ---- Dog house position ----
 const DOG_HOUSE_X = 0;
@@ -37,9 +27,7 @@ const DOG_BARK_COOLDOWN_MS = 2500;
 const DOG_SPRITE_SRC       = "./assets/sprites/pixel-dog.svg";
 const DOG_HOUSE_SPRITE_SRC = "./assets/sprites/pixel-doghouse.svg";
 
-// ============================================================
 //  Runtime state  (all mutable; reset fully on each initDog())
-// ============================================================
 let _dogState = null;     // position, timers, facing
 let _dogEl    = null;     // the moving dog <div>
 let _dogHouseEl = null;   // static dog-house <img> on tile (0,1)
@@ -48,9 +36,7 @@ let _barkBubbleTimeout = 0;
 let _lastDogTileIdx = -1;
 let _farmerMoveDisposer = null; // unsubscribe handle for GameServices event
 
-// ============================================================
 //  Web Audio  (lazy; no asset files needed)
-// ============================================================
 let _barkAudioCtx = null;
 
 const DOG_MORNING_GRID_MIN_X = 5;
@@ -62,7 +48,7 @@ const DOG_MORNING_GRID_MAX_Y = 9;
 // ---- Public entry points ----
 
 function initDog() {
-  // ---- Teardown any previous run (fix #5: restart leak) ----
+  // ---- Teardown any previous run ----
   if (_farmerMoveDisposer) {
     _farmerMoveDisposer();
     _farmerMoveDisposer = null;
@@ -81,7 +67,6 @@ function initDog() {
   _dogState = {
     x: DOG_HOUSE_X,
     y: DOG_HOUSE_Y,
-    // Track previous position so wander never reverses (fix #1).
     prevX: DOG_HOUSE_X,
     prevY: DOG_HOUSE_Y,
     stepTimerMs:    DOG_STEP_INTERVAL_DAYTIME_MS,
@@ -137,7 +122,6 @@ function initDog() {
   ].join(";");
   _dogEl.appendChild(img);
 
-  // ---- Fix #3: bark when the farmer moves onto the dog's tile ----
   // GameServices.on() returns an unsubscribe fn we store for cleanup.
   _farmerMoveDisposer = GameServices.on("farmer:moved", _triggerBarkIfOnSameTile);
   if (typeof registerAppDisposer === "function") {
@@ -149,9 +133,7 @@ function initDog() {
   _syncDogDom();
 }
 
-// ============================================================
 //  Morning destination — picks a random tile in the 5×5 centre
-// ============================================================
 
 function _pickMorningDestination() {
   // Collect valid (non-hazard) tiles from the centre 5×5 and pick one at random.
@@ -176,9 +158,7 @@ function resetDogMorningRoam() {
   _dogState.morningDestY = null;
 }
 
-// ============================================================
 //  Main tick  (called from main.js tick())
-// ============================================================
 
 function tickDog(dtMs) {
   if (!_dogState || state.paused) return;
@@ -209,10 +189,8 @@ function tickDog(dtMs) {
   _triggerBarkIfOnSameTile(); // bark if dog stepped onto farmer's tile
 }
 
-// ============================================================
-//  Movement — wander (fix #1: no reversal)
+//  Movement — wander
 //  If a morning destination is set, walk toward it instead.
-// ============================================================
 
 // ---- Movement helpers ----
 
@@ -263,10 +241,8 @@ function _dogWander() {
   // Completely boxed in — stay put.
 }
 
-// ============================================================
 //  Movement — shared step-toward helper
 //  traverseAny: if true, skips terrain validity check (used for going home)
-// ============================================================
 
 function _dogStepToward(destX, destY, traverseAny) {
   const distX = Math.abs(destX - _dogState.x);
@@ -298,9 +274,7 @@ function _dogStepToward(destX, destY, traverseAny) {
   }
 }
 
-// ============================================================
-//  Movement — go home (fix #2: traverse any terrain)
-// ============================================================
+//  Movement — go home
 
 function _dogStepTowardHome() {
   if (_dogState.x === DOG_HOUSE_X && _dogState.y === DOG_HOUSE_Y) {
@@ -311,9 +285,7 @@ function _dogStepTowardHome() {
   _dogStepToward(DOG_HOUSE_X, DOG_HOUSE_Y, true);
 }
 
-// ============================================================
 //  Helpers
-// ============================================================
 
 function _isValidDogTile(x, y) {
   if (x < 0 || y < 0 || x >= WORLD_SIZE || y >= WORLD_SIZE) return false;
@@ -334,9 +306,7 @@ function _shuffleDirs(arr) {
   return a;
 }
 
-// ============================================================
 //  Bark bubble
-// ============================================================
 
 // ---- Bark helpers ----
 
@@ -350,9 +320,7 @@ function _triggerBarkIfOnSameTile() {
   }
 }
 
-// ============================================================
 //  Initialise (or re-initialise) all dog DOM & state
-// ============================================================
 
 function _playBark() {
   try {
@@ -386,9 +354,7 @@ function _playBark() {
   }
 }
 
-// ============================================================
 //  Bark trigger  (shared by dog-step and farmer-move paths)
-// ============================================================
 
 // ---- DOM helpers ----
 
@@ -423,9 +389,7 @@ function _showBarkBubble() {
   }, 1400);
 }
 
-// ============================================================
 //  DOM sync — move dog element into the correct tile
-// ============================================================
 
 function _syncDogDom() {
   if (!_dogEl || !_dogState) return;
@@ -437,9 +401,7 @@ function _syncDogDom() {
   _lastDogTileIdx = idx;
 }
 
-// ============================================================
 //  CSS (injected once; id guard survives restarts)
-// ============================================================
 
 (function injectDogCss() {
   if (document.getElementById("dog-styles")) return;

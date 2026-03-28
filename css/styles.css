@@ -319,8 +319,8 @@ img, .tile--path { image-rendering: pixelated; }
 }
 
 .farmer__img{
-  width: clamp(16px, 59.09%, 40px);
-  height: clamp(16px, 59.09%, 40px);
+  width: clamp(20px, 73.61%, 50px);
+  height: clamp(20px, 73.61%, 50px);
   display: block;
   pointer-events: none;
 }

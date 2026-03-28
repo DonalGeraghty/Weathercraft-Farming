@@ -222,8 +222,6 @@ function enforceHazardPlantValidity() {
   }
 }
 
-// (Helpers removed: 7AM weather hazard decay disabled)
-
 /**
  * Shared helper: applies `type` hazard ("waterlogged" | "scorched") to `addCount`
  * randomly-chosen eligible field tiles, clearing the opposite hazard on nearby tiles.
