@@ -119,6 +119,9 @@ function createAudioManager() {
     init() {
       bgm     = document.getElementById("bgm");
       rooster = document.getElementById("rooster-sfx");
+      if (bgm) {
+        bgm.src = isNighttime() ? pickRandomBgmNightTrack() : pickRandomBgmDayTrack();
+      }
     },
 
     update(dtMs) {

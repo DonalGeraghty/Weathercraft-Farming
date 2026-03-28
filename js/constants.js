@@ -87,7 +87,6 @@ const NIGHT_BGM_MIX = 3.0; // Boosted because the night track is mastered quietl
 const BGM_DAY_TRACKS = [
   "./assets/audio/music-cozy-field-sunrise-01.mp3",
   "./assets/audio/music-cozy-field-sunrise-02.mp3",
-  "./assets/audio/music-day-01.mp3",
 ];
 const BGM_NIGHT_TRACKS = [
   "./assets/audio/music-midnight-orchard-swing-01.mp3",
