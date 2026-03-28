@@ -250,7 +250,7 @@ function importStateFromCsv(csvText) {
   // Ensure any loaded crops obey the hazard placement rules.
   enforceHazardPlantValidity();
 
-  state.roosterPlayedToday = state.dayElapsedMs >= (7 / 24) * MS_PER_DAY;
+  state.roosterPlayedToday = state.dayElapsedMs >= ROOSTER_THRESHOLD_MS;
 
   setWeatherTheme();
   updateWaterAdjacency();

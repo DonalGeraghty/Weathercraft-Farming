@@ -10,13 +10,13 @@ function tryMove(dx, dy) {
   updateHighlights();
   syncFarmerDom();
   // Notify listeners (e.g. dog bark check) that the farmer has moved.
-  GameServices.emit("farmer:moved", { x: nx, y: ny });
+  GameServices.emit(EVENT_FARMER_MOVED, { x: nx, y: ny });
 }
 
 function tryPlantHere() {
   const cropId = state.selectedSeedId;
-  const have = state.inventory[cropId] ?? 0;
-  if (have <= 0) return;
+  const seedCount = state.inventory[cropId] ?? 0;
+  if (seedCount <= 0) return;
 
   const tile = state.tiles[tileIndex(state.farmer.x, state.farmer.y)];
   if (!tile || tile.kind !== "field") return;
@@ -47,7 +47,7 @@ function tryPlantHere() {
   }
 
   tile.crop = { cropId, progress: 0 };
-  state.inventory[cropId] = have - 1;
+  state.inventory[cropId] = seedCount - 1;
   markTileDirty(tileIndex(x, y));
 
   emitUiSync({ shop: true, highlights: true });

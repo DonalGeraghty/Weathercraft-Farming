@@ -23,7 +23,6 @@ let pauseButtonElement;
 let inventoryItemElements = {};
 let inventoryCountElements = {};
 let lastInventoryCounts = {};
-let lastSelectedSeedId = null;
 
 
 // ---- Initialisation ----

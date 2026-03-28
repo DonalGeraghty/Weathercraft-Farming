@@ -154,16 +154,9 @@ function markTileDirtySafe(idx) {
 function reconcileExclusiveHazards(tile, idx = -1) {
   if (!tile || tile.kind !== "field") return;
   // A tile may only ever be one hazard type; waterlogged takes priority.
-  if (tile.waterlogged) {
-    if (tile.scorched) {
-      tile.scorched = false;
-      if (idx >= 0) markTileDirtySafe(idx);
-    }
-  } else if (tile.scorched) {
-    if (tile.waterlogged) {
-      tile.waterlogged = false;
-      if (idx >= 0) markTileDirtySafe(idx);
-    }
+  if (tile.waterlogged && tile.scorched) {
+    tile.scorched = false;
+    if (idx >= 0) markTileDirtySafe(idx);
   }
 }
 

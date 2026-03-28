@@ -89,7 +89,6 @@ function updateShopInfo() {
   if (buySeedButtonElement) buySeedButtonElement.disabled = state.sunriseTransition || !crop || !isAtShop || state.moneyEur < crop.seedCost * 1;
   if (buySeed5ButtonElement) buySeed5ButtonElement.disabled = state.sunriseTransition || !crop || !isAtShop || state.moneyEur < crop.seedCost * 5;
   if (buySeed10ButtonElement) buySeed10ButtonElement.disabled = state.sunriseTransition || !crop || !isAtShop || state.moneyEur < crop.seedCost * 10;
-  lastSelectedSeedId = state.selectedSeedId;
 }
 
 function updateWeatherMachineUi() {

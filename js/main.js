@@ -1,17 +1,3 @@
-function initGame() {
-  state.tiles = createInitialTiles();
-  state.weatherId = weatherForDay();
-  state.weatherMachineSelection = state.weatherId;
-  buildGridDom();
-  bindUi();
-  updateHud();
-  setWeatherTheme();
-  renderAll(true);
-  updateHighlights();
-  updateWaterAdjacency();
-  initDog();
-}
-
 // ---- Ticker ----
 // Owns the RAF loop, fixed-step accumulator, and visibility handling.
 // Knows nothing about crops, dogs, or audio.
@@ -59,7 +45,7 @@ function createTicker(onTick) {
 
       const renderElapsed = now - lastRenderTime;
       if ((hasDirtyTiles() || ticks > 0) && renderElapsed >= RENDER_MIN_MS) {
-        renderAll();
+        renderFrame();
         lastRenderTime = now;
       }
     }
@@ -105,10 +91,10 @@ function createAudioManager() {
   function applyVolume(multiplier) {
     if (!bgm) return;
     const pct = Number(state.musicVolumePercent) || 0;
-    const next = clamp01((pct / 100) * getBgmBase() * multiplier);
-    if (Math.abs(next - lastAppliedVolume) >= 0.005) {
-      bgm.volume = next;
-      lastAppliedVolume = next;
+    const nextVolume = clamp01((pct / 100) * getBgmBase() * multiplier);
+    if (Math.abs(nextVolume - lastAppliedVolume) >= 0.005) {
+      bgm.volume = nextVolume;
+      lastAppliedVolume = nextVolume;
     }
   }
 
@@ -208,7 +194,16 @@ function tick(dtMs) {
   runCropSimulation(dtMs);
   updateHudOnCooldown();
   tickDog(dtMs);
+}
+
+// ---- Render pass ----
+// Called once per display frame, after all logic ticks.
+// Must only read state — never write to it.
+
+function renderFrame() {
+  renderAll();
   syncBodyNightClass();
+  renderDog();
 }
 
 function syncBodyNightClass() {
@@ -258,7 +253,6 @@ function processSunriseIfNeeded() {
   enforceHazardPlantValidity();
   setWeatherTheme();
   emitUiSync({ shop: true, highlights: true });
-  renderAll();
 }
 
 function wrapDayIfNeeded() {
@@ -283,7 +277,20 @@ function updateHudOnCooldown() {
 }
 
 // ---- Game initialisation ----
-// Unchanged — initGame() still calls buildGridDom, bindUi, etc.
+
+function initGame() {
+  state.tiles = createInitialTiles();
+  state.weatherId = weatherForDay();
+  state.weatherMachineSelection = state.weatherId;
+  buildGridDom();
+  bindUi();
+  updateHud();
+  setWeatherTheme();
+  renderAll(true);
+  updateHighlights();
+  updateWaterAdjacency();
+  initDog();
+}
 
 // ---- Runtime module ----
 

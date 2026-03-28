@@ -71,7 +71,6 @@ function initDog() {
     prevY: DOG_HOUSE_Y,
     stepTimerMs:    DOG_STEP_INTERVAL_DAYTIME_MS,
     barkCooldownMs: 0,
-    isHome: true,
     morningDestX: null,
     morningDestY: null,
     morningRoamDone: state.dayElapsedMs >= DOG_8AM_THRESHOLD_MS,
@@ -123,7 +122,7 @@ function initDog() {
   _dogEl.appendChild(img);
 
   // GameServices.on() returns an unsubscribe fn we store for cleanup.
-  _farmerMoveDisposer = GameServices.on("farmer:moved", _triggerBarkIfOnSameTile);
+  _farmerMoveDisposer = GameServices.on(EVENT_FARMER_MOVED, _triggerBarkIfOnSameTile);
   if (typeof registerAppDisposer === "function") {
     registerAppDisposer(() => {
       if (_farmerMoveDisposer) { _farmerMoveDisposer(); _farmerMoveDisposer = null; }
@@ -185,8 +184,13 @@ function tickDog(dtMs) {
     _dogWander();
   }
 
-  _syncDogDom();
   _triggerBarkIfOnSameTile(); // bark if dog stepped onto farmer's tile
+}
+
+//  Render pass — move dog element into the correct tile (called from renderFrame)
+
+function renderDog() {
+  _syncDogDom();
 }
 
 //  Movement — wander
@@ -195,8 +199,6 @@ function tickDog(dtMs) {
 // ---- Movement helpers ----
 
 function _dogWander() {
-  _dogState.isHome = false;
-
   // If we have a morning destination, walk toward it.
   if (_dogState.morningDestX !== null) {
     if (_dogState.x === _dogState.morningDestX && _dogState.y === _dogState.morningDestY) {
@@ -277,11 +279,7 @@ function _dogStepToward(destX, destY, traverseAny) {
 //  Movement — go home
 
 function _dogStepTowardHome() {
-  if (_dogState.x === DOG_HOUSE_X && _dogState.y === DOG_HOUSE_Y) {
-    _dogState.isHome = true;
-    return;
-  }
-  _dogState.isHome = false;
+  if (_dogState.x === DOG_HOUSE_X && _dogState.y === DOG_HOUSE_Y) return;
   _dogStepToward(DOG_HOUSE_X, DOG_HOUSE_Y, true);
 }
 

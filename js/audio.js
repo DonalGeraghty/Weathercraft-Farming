@@ -5,7 +5,7 @@ let gameWrapElementCache = null;
 
 function isNightBgmTrackSource(src) {
   const s = String(src || "").toLowerCase();
-  return s.includes("midnight-orchard-swing") || s.includes("midnight%20orchard%20swing") || s.includes("midnight orchard swing");
+  return s.includes("midnight-orchard-swing");
 }
 
 function pickRandomBgmDayTrack() {

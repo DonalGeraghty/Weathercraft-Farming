@@ -107,6 +107,10 @@ const BGM_FADE_LIMIT_MS = 5000;
 const SEED_KEY_ORDER = ["carrot", "onion", "cabbage", "watercress", "cactusfruit"];
 const HUD_UPDATE_COOLDOWN_MS = 150;
 
+// ---- Events ----
+
+const EVENT_FARMER_MOVED = "farmer:moved";
+
 // ---- Initial field generation ----
 // See applyRandomFieldStart in game-mechanics.js.
 

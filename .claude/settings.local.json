@@ -11,7 +11,12 @@
       "Bash(echo \"Testing js/ui/$file.js:\")",
       "Bash(curl -s -o /dev/null -w \"  Status: %{http_code}\\\\n\" http://localhost:8000/js/ui/$file.js)",
       "Bash(done)",
-      "Bash(wc -l /c/Users/conal/Desktop/Weathercraft-Farming/js/ui/*.js)"
+      "Bash(wc -l /c/Users/conal/Desktop/Weathercraft-Farming/js/ui/*.js)",
+      "Bash(python scripts/clean_tileset.py)",
+      "Bash(pip install:*)",
+      "Bash(python -c \":*)",
+      "Bash(python -c \"import os; print\\(os.listdir\\(''assets/sprites''\\)\\)\")",
+      "Bash(python -c \"import os; files=[f for f in os.listdir\\(''assets/sprites''\\) if ''Gemini'' in f or ''gemini'' in f]; print\\(files\\)\")"
     ]
   }
 }
