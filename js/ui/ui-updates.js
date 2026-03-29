@@ -1,14 +1,6 @@
 // ---- Update functions ----
 
 function updateHud() {
-  if (!hudDayElement) {
-    hudDayElement = document.getElementById("day-value");
-    hudTimeElement = document.getElementById("time-value");
-    hudWeatherIconElement = document.getElementById("weather-icon");
-    hudWeatherValueElement = document.getElementById("weather-value");
-    hudMoneyElement = document.getElementById("money-value");
-  }
-
   if (lastHudDay !== state.day) {
     hudDayElement.textContent = String(state.day);
     lastHudDay = state.day;
@@ -27,9 +19,9 @@ function updateHud() {
       if (hudWeatherIconElement) hudWeatherIconElement.textContent = "🌙";
     } else {
       const weatherDef = WEATHER[state.weatherId];
-      const weatherName = weatherDef?.name ?? state.weatherId;
-      const weatherCssClass = weatherDef?.cssClass ?? "";
-      hudWeatherValueElement.innerHTML = `<span class="${weatherCssClass}">${weatherName}</span>`;
+      const weatherName = weatherDef ? weatherDef.name : String(state.weatherId).replace(/[<>&"']/g, "");
+      const weatherCssClass = weatherDef ? weatherDef.cssClass : "";
+      hudWeatherValueElement.innerHTML = '<span class="' + weatherCssClass + '">' + weatherName + '</span>';
       if (hudWeatherIconElement) hudWeatherIconElement.textContent = weatherIcon(state.weatherId);
     }
     lastHudWeatherId = state.weatherId;
@@ -44,10 +36,6 @@ function updateHud() {
 
 function updateShopInfo() {
   const crop = CROPS[state.selectedSeedId];
-  if (!shopSeedInfoElement) shopSeedInfoElement = document.getElementById("seed-info");
-  if (!buySeedButtonElement) buySeedButtonElement = document.getElementById("buy-seed-btn");
-  if (!buySeed5ButtonElement) buySeed5ButtonElement = document.getElementById("buy-seed-5-btn");
-  if (!buySeed10ButtonElement) buySeed10ButtonElement = document.getElementById("buy-seed-10-btn");
   const waterAdjMult = crop?.adjacentFloodedGrowthMultiplier ?? null;
   const aridMult = crop?.aridGrowthMultiplier ?? null;
   const weatherMultStr = crop
@@ -76,34 +64,27 @@ function updateShopInfo() {
   }
 
   const isAtShop = isAtShopTile();
-  const seedInfoText = !isAtShop
-    ? `<span style="color:var(--danger);font-weight:bold;">Stand on Shop tile (top-right) to buy</span><br/>${infoText}`
-    : infoText;
+  const warningHtml = '<span class="text--warning">Stand on Shop tile (top-right) to buy</span><br/>' + infoText;
   if (shopSeedInfoElement) {
-    if (isAtShop) {
-      if (shopSeedInfoElement.textContent !== seedInfoText) shopSeedInfoElement.textContent = seedInfoText;
-    } else if (shopSeedInfoElement.innerHTML !== seedInfoText) {
-      shopSeedInfoElement.innerHTML = seedInfoText;
+    const nextHtml = isAtShop ? infoText : warningHtml;
+    if (lastShopSeedInfoHtml !== nextHtml) {
+      shopSeedInfoElement.innerHTML = nextHtml;
+      lastShopSeedInfoHtml = nextHtml;
     }
   }
 
-  if (buySeedButtonElement) buySeedButtonElement.disabled = state.sunriseTransition || !crop || !isAtShop || state.moneyEur < crop.seedCost * 1;
-  if (buySeed5ButtonElement) buySeed5ButtonElement.disabled = state.sunriseTransition || !crop || !isAtShop || state.moneyEur < crop.seedCost * 5;
-  if (buySeed10ButtonElement) buySeed10ButtonElement.disabled = state.sunriseTransition || !crop || !isAtShop || state.moneyEur < crop.seedCost * 10;
+  const canBuy = !state.sunriseTransition && !!crop && isAtShop;
+  if (buySeedButtonElement)   buySeedButtonElement.disabled   = !canBuy || state.moneyEur < crop.seedCost;
+  if (buySeed5ButtonElement)  buySeed5ButtonElement.disabled  = !canBuy || state.moneyEur < crop.seedCost * 5;
+  if (buySeed10ButtonElement) buySeed10ButtonElement.disabled = !canBuy || state.moneyEur < crop.seedCost * 10;
 }
 
 function updateWeatherMachineUi() {
-  for (const id of Object.keys(WEATHER)) {
-    if (!weatherMachineButtonElements[id]) {
-      weatherMachineButtonElements[id] = document.getElementById(`weather-machine-${id}-btn`);
-    }
-  }
-  if (!weatherMachineInfoElement) weatherMachineInfoElement = document.getElementById("weather-machine-info");
   const isAtMachine = isAtWeatherMachineTile();
   const isEnabled = isAtMachine && !state.sunriseTransition;
 
   for (const id of Object.keys(WEATHER)) {
-    const btn = weatherMachineButtonElements[id];
+    const btn = getWeatherBtn(id);
     if (btn) {
       btn.classList.toggle("btn--active", state.weatherMachineSelection === id);
       btn.disabled = !isEnabled;
@@ -114,9 +95,9 @@ function updateWeatherMachineUi() {
     const chance = Math.round(getEffectiveWeatherChangeChance() * 100);
     const spent = state.weatherMachineSpendCommitted ?? 0;
     const weatherDef = WEATHER[state.weatherMachineSelection];
-    const weatherName = weatherDef?.name ?? state.weatherMachineSelection;
-    const weatherCssClass = weatherDef?.cssClass ?? "";
-    let infoHtml = `Tomorrow: ${weatherIcon(state.weatherMachineSelection)} <span class="${weatherCssClass}">${weatherName}</span> · Change chance: ${chance}% (spent €${spent})`;
+    const weatherName = weatherDef ? weatherDef.name : String(state.weatherMachineSelection).replace(/[<>&"']/g, "");
+    const weatherCssClass = weatherDef ? weatherDef.cssClass : "";
+    let infoHtml = 'Tomorrow: ' + weatherIcon(state.weatherMachineSelection) + ' <span class="' + weatherCssClass + '">' + weatherName + '</span> · Change chance: ' + chance + '% (spent €' + spent + ')';
 
     if (!isAtMachine) {
       infoHtml = `<span style="color:var(--danger);font-weight:bold;">Stand on Machine (bottom-right) to use</span><br/>${infoHtml}`;

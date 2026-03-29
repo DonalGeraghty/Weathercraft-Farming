@@ -15,9 +15,8 @@
           <div class="title__hint"><span id="day-length-minutes">5</span> minutes = 1 day · Weather affects growth</div>
         </div>
         <div class="hud" aria-label="Game status">
-          <div class="hud__item hud__item--btn">
-            <button id="skip-to-7am-btn" class="btn" type="button">Skip to 7am</button>
-          </div>
+          <button id="skip-to-7am-btn" class="btn btn--weather" type="button">Skip to 7am</button>
+          <button id="pause-btn" class="btn btn--weather pause-btn" type="button">Pause</button>
           <div class="hud__item"><span class="hud__label">Day</span> <span id="day-value">1</span></div>
           <div class="hud__item"><span class="hud__label">Time</span> <span id="time-value">12 AM</span></div>
           <div class="hud__item">
@@ -26,10 +25,6 @@
               <span id="weather-icon" class="weather-icon" aria-hidden="true">☀️</span>
               <span id="weather-value">Sun</span>
             </span>
-          </div>
-          <div class="hud__item"><span class="hud__label">Money</span> €<span id="money-value">0</span></div>
-          <div class="hud__item hud__item--btn">
-            <button id="pause-btn" class="btn pause-btn" type="button">Pause</button>
           </div>
         </div>
       </header>
@@ -93,7 +88,7 @@
 
         <aside class="panel panel--right" aria-label="Shop and weather">
           <div class="card">
-            <div class="card__title">Seed Shop</div>
+            <div class="card__title card__title--row">Seed Shop<span class="hud__item hud__item--money"><span class="hud__label">Money</span> €<span id="money-value">0</span></span></div>
             <div class="shop-row">
               <label class="label" for="seed-select">Seed</label>
               <select id="seed-select" class="select"></select>
@@ -112,6 +107,10 @@
 
           <div class="card">
             <div class="card__title">Weather Machine</div>
+            <!-- Intentionally only Stormy and Drought are offered — the machine
+                 is a hazard tool, not a general forecast selector. The JS in
+                 setupWeatherMachineUiHandlers gracefully skips any weather ID
+                 that has no corresponding button. -->
             <div class="weather-machine-row" role="group" aria-label="Set tomorrow weather">
               <button id="weather-machine-stormy-btn" class="btn btn--weather" type="button">
                 ⛈️ <span class="text--stormy">Stormy</span>
@@ -168,6 +167,7 @@
       aria-hidden="true"
     ></audio>
 
+    <!-- Load order matters: constants → game-mechanics → game-state → game-services → audio → ui/* → dog → main -->
     <script src="./js/constants.js" defer></script>
     <script src="./js/game-mechanics.js" defer></script>
     <script src="./js/game-state.js" defer></script>

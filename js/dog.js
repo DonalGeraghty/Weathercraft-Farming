@@ -151,6 +151,14 @@ function resetDogMorningRoam() {
   _dogState.morningDestY = null;
 }
 
+function teleportDogToHouse() {
+  if (!_dogState) return;
+  _dogState.x     = DOG_HOUSE_X;
+  _dogState.y     = DOG_HOUSE_Y;
+  _dogState.prevX = DOG_HOUSE_X;
+  _dogState.prevY = DOG_HOUSE_Y;
+}
+
 //  Main tick  (called from main.js tick())
 
 function tickDog(dtMs) {

@@ -28,20 +28,46 @@ function bindUi() {
 
   setupSeedPurchaseUi(tryBuySelectedSeed);
 
-  const pauseBtn = pauseButtonElement;
-  if (pauseBtn) {
+  if (pauseButtonElement) {
     const onPauseClick = () => setPaused(!state.paused);
-    pauseBtn.addEventListener("click", onPauseClick);
-    addUiDisposer(() => pauseBtn.removeEventListener("click", onPauseClick));
+    pauseButtonElement.addEventListener("click", onPauseClick);
+    addUiDisposer(() => pauseButtonElement.removeEventListener("click", onPauseClick));
   }
 
   const skipTo7amBtn = document.getElementById("skip-to-7am-btn");
   if (skipTo7amBtn) {
     const onSkipTo7am = () => {
+      if (state.dayElapsedMs < ROOSTER_THRESHOLD_MS) {
+        // Before 7am: skip to 7am same day (all nighttime, no growth)
+        const skipMs = ROOSTER_THRESHOLD_MS - state.dayElapsedMs;
+        updateRotAndBlack(skipMs);
+        state.dayElapsedMs = ROOSTER_THRESHOLD_MS;
+        resetDogMorningRoam();
+      } else {
+        // At or after 7am: skip to 7am next day
+        // Phase 1: daytime portion from now until 10pm (if currently daytime)
+        if (state.dayElapsedMs < NIGHT_START_MS) {
+          const daytimeMs = NIGHT_START_MS - state.dayElapsedMs;
+          growAllCrops(daytimeMs);
+          updateRotAndBlack(daytimeMs);
+          state.dayElapsedMs = NIGHT_START_MS;
+        }
+        // Phase 2: 10pm → midnight (nighttime, rot only)
+        const toMidnightMs = MS_PER_DAY - state.dayElapsedMs;
+        updateRotAndBlack(toMidnightMs);
+        // Wrap the day
+        state.dayElapsedMs = 0;
+        state.day += 1;
+        resetDogMorningRoam();
+        // Phase 3: midnight → 7am (nighttime, rot only)
+        updateRotAndBlack(ROOSTER_THRESHOLD_MS);
+        state.dayElapsedMs = ROOSTER_THRESHOLD_MS;
+      }
+
+      teleportDogToHouse();
       state.roosterPlayedToday = false;
-      state.dayElapsedMs = ROOSTER_THRESHOLD_MS;
       processSunriseIfNeeded();
-      emitUiSync({ hud: true });
+      emitUiSync({ hud: true, highlights: true });
     };
     skipTo7amBtn.addEventListener("click", onSkipTo7am);
     addUiDisposer(() => skipTo7amBtn.removeEventListener("click", onSkipTo7am));
@@ -80,26 +106,26 @@ function bindUi() {
   }
 
   setupWeatherMachineUiHandlers(commitWeatherMachineSpend);
-  setupKeyboardControls(seedSelect, tryBuySelectedSeed, () => {
-    holdingPlant = true;
-  }, () => {
-    holdingHarvest = true;
-  }, () => {
-    holdingPlant = false;
-  }, () => {
-    holdingHarvest = false;
-  }, doMove);
+  setupKeyboardControls(seedSelect, tryBuySelectedSeed, {
+    onPlantDown:   () => { holdingPlant = true; },
+    onHarvestDown: () => { holdingHarvest = true; },
+    onPlantUp:     () => { holdingPlant = false; },
+    onHarvestUp:   () => { holdingHarvest = false; },
+    doMove,
+  });
 
   emitUiSync({ shop: true, weatherMachine: true });
   setPaused(state.paused);
 
   // Cache frequently-updated UI elements once.
-  for (const id of Object.keys(WEATHER)) {
-    weatherMachineButtonElements[id] = document.getElementById(`weather-machine-${id}-btn`);
-  }
   weatherMachineInfoElement = document.getElementById("weather-machine-info");
   shopSeedInfoElement = document.getElementById("seed-info");
   inventoryGridElement = document.getElementById("inventory-grid");
+  hudDayElement         = document.getElementById("day-value");
+  hudTimeElement        = document.getElementById("time-value");
+  hudWeatherIconElement = document.getElementById("weather-icon");
+  hudWeatherValueElement = document.getElementById("weather-value");
+  hudMoneyElement       = document.getElementById("money-value");
   setupInventoryGridUi();
   setupSaveLoadControls();
   setupMusicControls();
@@ -155,12 +181,11 @@ function setupSeedPurchaseUi(tryBuySelectedSeed) {
 
 function setupWeatherMachineUiHandlers(commitWeatherMachineSpend) {
   for (const id of Object.keys(WEATHER)) {
-    const btn = document.getElementById(`weather-machine-${id}-btn`);
+    const btn = getWeatherBtn(id);
     if (btn) {
-      const weatherId = id;
       const onBtnClick = () => {
         if (state.sunriseTransition || !isAtWeatherMachineTile()) return;
-        state.weatherMachineSelection = weatherId;
+        state.weatherMachineSelection = id;
         commitWeatherMachineSpend(WEATHER_SPEND_UNIT_EUR);
       };
       btn.addEventListener("click", onBtnClick);
@@ -169,7 +194,7 @@ function setupWeatherMachineUiHandlers(commitWeatherMachineSpend) {
   }
 }
 
-function setupKeyboardControls(seedSelect, tryBuySelectedSeed, setHoldingPlant, setHoldingHarvest, clearHoldingPlant, clearHoldingHarvest, doMove) {
+function setupKeyboardControls(seedSelect, tryBuySelectedSeed, { onPlantDown, onHarvestDown, onPlantUp, onHarvestUp, doMove }) {
   const onKeyDown = (e) => {
     const key = e.key.toLowerCase();
     if (key === "p") {
@@ -200,13 +225,10 @@ function setupKeyboardControls(seedSelect, tryBuySelectedSeed, setHoldingPlant, 
 
     // Route movement into the room when inside a building
     if (isBuildingInteriorVisible()) {
-      if (["w", "arrowup", "a", "arrowleft", "s", "arrowdown", "d", "arrowright"].includes(key)) {
-        e.preventDefault();
-        if (key === "w" || key === "arrowup")    tryMoveInRoom(0, -1);
-        if (key === "a" || key === "arrowleft")  tryMoveInRoom(-1, 0);
-        if (key === "s" || key === "arrowdown")  tryMoveInRoom(0,  1);
-        if (key === "d" || key === "arrowright") tryMoveInRoom(1,  0);
-      }
+      if (key === "w" || key === "arrowup")         { e.preventDefault(); tryMoveInRoom(0, -1); }
+      else if (key === "a" || key === "arrowleft")  { e.preventDefault(); tryMoveInRoom(-1, 0); }
+      else if (key === "s" || key === "arrowdown")  { e.preventDefault(); tryMoveInRoom(0,  1); }
+      else if (key === "d" || key === "arrowright") { e.preventDefault(); tryMoveInRoom(1,  0); }
       return; // block all other input while inside
     }
 
@@ -224,11 +246,11 @@ function setupKeyboardControls(seedSelect, tryBuySelectedSeed, setHoldingPlant, 
     if (key === "d" || key === "arrowright") doMove(1, 0);
 
     if (key === " ") {
-      setHoldingPlant();
+      onPlantDown();
       if (!e.repeat) tryPlantHere();
     }
     if (key === "e") {
-      setHoldingHarvest();
+      onHarvestDown();
       if (!e.repeat) tryHarvestHere();
     }
 
@@ -250,8 +272,8 @@ function setupKeyboardControls(seedSelect, tryBuySelectedSeed, setHoldingPlant, 
 
   const onKeyUp = (e) => {
     const key = e.key.toLowerCase();
-    if (key === " ") clearHoldingPlant();
-    if (key === "e") clearHoldingHarvest();
+    if (key === " ") onPlantUp();
+    if (key === "e") onHarvestUp();
   };
   window.addEventListener("keyup", onKeyUp);
   addUiDisposer(() => window.removeEventListener("keyup", onKeyUp));

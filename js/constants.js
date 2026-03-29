@@ -15,6 +15,7 @@ const WEATHER_MACHINE_TILE_Y = WORLD_SIZE - 1;
 
 const MS_PER_DAY = 100_000; // 100 seconds (1.66 minutes) real time = 1 in-game day
 const ROOSTER_THRESHOLD_MS = (7 / 24) * MS_PER_DAY;
+const NIGHT_START_MS = (22 / 24) * MS_PER_DAY;
 const SUNRISE_TRANSITION_MS = 2000;
 
 // ---- Crops & weather ----
@@ -132,9 +133,7 @@ const FARMHOUSE_TILE_X = 0;
 const FARMHOUSE_TILE_Y = 0;
 
 const BUILDINGS = [
-  { id: "farmhouse",      name: "Farmhouse",       tileX: FARMHOUSE_TILE_X,       tileY: FARMHOUSE_TILE_Y },
-  { id: "shop",           name: "Seed Shop",        tileX: SHOP_TILE_X,            tileY: SHOP_TILE_Y },
-  { id: "weatherMachine", name: "Weather Machine",  tileX: WEATHER_MACHINE_TILE_X, tileY: WEATHER_MACHINE_TILE_Y },
+  { id: "farmhouse", name: "Farmhouse", tileX: FARMHOUSE_TILE_X, tileY: FARMHOUSE_TILE_Y },
 ];
 
 // ---- Initial field generation ----

@@ -191,24 +191,17 @@ function enforceHazardPlantValidity() {
       continue;
     }
 
-    // Arid kills everything except cactusfruit.
-    if (terrain === "arid" && cropId !== "cactusfruit") {
+    // Arid kills watercress only.
+    if (terrain === "arid" && cropId === "watercress") {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
       markTileDirtySafe(idx);
       continue;
     }
 
-    // Muddy kills cactusfruit.
-    if (terrain === "muddy" && cropId === "cactusfruit") {
-      tile.crop = null;
-      tile.readyRotMsRemaining = 0;
-      markTileDirtySafe(idx);
-      continue;
-    }
-
-    // Cactusfruit can only grow on arid soil.
-    if (cropId === "cactusfruit" && terrain !== "arid") {
+    // Muddy (swampy) kills cactusfruit.
+    // Cactusfruit can only grow on grassy or arid soil.
+    if (cropId === "cactusfruit" && terrain !== "grassy" && terrain !== "arid") {
       tile.crop = null;
       tile.readyRotMsRemaining = 0;
       markTileDirtySafe(idx);

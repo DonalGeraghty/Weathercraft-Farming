@@ -25,6 +25,7 @@ let inventoryItemElements = {};
 let inventoryCountElements = {};
 let lastInventoryCounts = {};
 let buildingInteriorElement = null;
+let lastShopSeedInfoHtml = "";
 
 
 // ---- Initialisation ----
@@ -43,6 +44,17 @@ function buildGridDom() {
   lastHighlightedIdx = null;
   lastCropIdByIdx = new Array(TILE_COUNT).fill(null);
   lastCropStageByIdx = new Array(TILE_COUNT).fill(null);
+
+  const TILE_ICONS = [
+    { tileX: SHOP_TILE_X,            tileY: SHOP_TILE_Y,            src: "./assets/sprites/pixel-shop.svg",            className: "shop-icon--map",            alt: "Shop" },
+    { tileX: WEATHER_MACHINE_TILE_X, tileY: WEATHER_MACHINE_TILE_Y, src: "./assets/sprites/pixel-weather-machine.svg", className: "weather-machine-icon--map", alt: "Weather Machine" },
+    { tileX: FARMHOUSE_TILE_X,       tileY: FARMHOUSE_TILE_Y,       src: "./assets/sprites/pixel-farmhouse.svg",       className: "farmhouse-icon--map",       alt: "Farmhouse" },
+  ];
+
+  const tileIconMap = new Map();
+  for (const iconDef of TILE_ICONS) {
+    tileIconMap.set(`${iconDef.tileX},${iconDef.tileY}`, iconDef);
+  }
 
   for (let y = 0; y < WORLD_SIZE; y++) {
     for (let x = 0; x < WORLD_SIZE; x++) {
@@ -65,50 +77,17 @@ function buildGridDom() {
         el.style.backgroundImage = `url('./assets/sprites/pixel-path-${suffix}.svg')`;
       }
       if (tile.kind === "field") {
-        const variant = (((x * 3 + y * 7) ^ (x + y)) % 2) + 1;
-        el.classList.add(`tile--variant-${variant}`);
+        el.classList.add("tile--variant-" + ((idx % 4) + 1));
       }
       el.setAttribute("role", "gridcell");
 
-      if (x === SHOP_TILE_X && y === SHOP_TILE_Y) {
-        const shopIcon = document.createElement("img");
-        shopIcon.src = "./assets/sprites/pixel-shop.svg";
-        shopIcon.className = "shop-icon--map"; // Swaying animation
-        shopIcon.style.position = "absolute";
-        shopIcon.style.inset = "5%";
-        shopIcon.style.width = "90%";
-        shopIcon.style.height = "90%";
-        shopIcon.style.objectFit = "cover";
-        shopIcon.style.imageRendering = "pixelated";
-        el.appendChild(shopIcon);
-      }
-
-      if (x === WEATHER_MACHINE_TILE_X && y === WEATHER_MACHINE_TILE_Y) {
-        const weatherMachineIcon = document.createElement("img");
-        weatherMachineIcon.src = "./assets/sprites/pixel-weather-machine.svg";
-        weatherMachineIcon.className = "weather-machine-icon--map"; // Pulsing CSS animation
-        weatherMachineIcon.style.position = "absolute";
-        weatherMachineIcon.style.inset = "5%";
-        weatherMachineIcon.style.width = "90%";
-        weatherMachineIcon.style.height = "90%";
-        weatherMachineIcon.style.objectFit = "cover";
-        weatherMachineIcon.style.imageRendering = "pixelated";
-        el.appendChild(weatherMachineIcon);
-      }
-
-      // Farmhouse on tile (0,0) — top-left corner, player's home
-      if (x === 0 && y === 0) {
-        const farmhouseIcon = document.createElement("img");
-        farmhouseIcon.src = "./assets/sprites/pixel-farmhouse.svg";
-        farmhouseIcon.alt = "Farmhouse";
-        farmhouseIcon.style.position = "absolute";
-        farmhouseIcon.style.inset = "5%";
-        farmhouseIcon.style.width = "90%";
-        farmhouseIcon.style.height = "90%";
-        farmhouseIcon.style.objectFit = "contain";
-        farmhouseIcon.style.imageRendering = "pixelated";
-        farmhouseIcon.style.filter = "drop-shadow(0 2px 3px rgba(0,0,0,0.4))";
-        el.appendChild(farmhouseIcon);
+      const iconDef = tileIconMap.get(`${x},${y}`);
+      if (iconDef) {
+        const img = document.createElement("img");
+        img.src = iconDef.src;
+        img.alt = iconDef.alt;
+        img.className = "map-icon " + iconDef.className;
+        el.appendChild(img);
       }
 
       gridEl.appendChild(el);
@@ -195,6 +174,7 @@ const FLOOR_SPRITES = [
 
 // Deterministic sprite selection so the floor looks the same every visit.
 function floorSpriteForTile(x, y, buildingId) {
+  // Farmhouse always uses the plain floor sprite; other buildings use a hash-based variant.
   if (buildingId === "farmhouse") return FLOOR_SPRITES[0];
   return FLOOR_SPRITES[((x * 5 + y * 3) ^ (x + y * 7)) % FLOOR_SPRITES.length];
 }
@@ -290,6 +270,7 @@ function placeRoomFarmer() {
 }
 
 function tryMoveInRoom(dx, dy) {
+  // Pressing down while already on the door exits immediately (before any move).
   if (dy === 1 && isAtRoomExit()) { hideBuildingInterior(); return; }
   const nx = roomFarmerX + dx;
   const ny = roomFarmerY + dy;
@@ -298,5 +279,18 @@ function tryMoveInRoom(dx, dy) {
   roomFarmerX = nx;
   roomFarmerY = ny;
   placeRoomFarmer();
+  // Also exit if any move (e.g. from above) lands the farmer on the door tile.
   if (isAtRoomExit()) hideBuildingInterior();
+}
+
+
+// ---- Element accessor ----
+
+// Single source of truth for weather-machine button elements.
+// Lazily caches on first call so the ID convention lives in one place.
+function getWeatherBtn(id) {
+  if (!weatherMachineButtonElements[id]) {
+    weatherMachineButtonElements[id] = document.getElementById("weather-machine-" + id + "-btn");
+  }
+  return weatherMachineButtonElements[id];
 }

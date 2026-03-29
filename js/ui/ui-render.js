@@ -18,14 +18,15 @@ function renderTile(idx, force = false) {
   tile.dirty = false;
 
   const el = tileElements[idx];
-  if (!tile || !el) return;
+  if (!el) return;
 
   const isBlack = tile.kind === "field" && tile.blackMsRemaining > 0;
   const terrain = tile.kind === "field" ? tile.terrain : null;
-  el.classList.toggle("tile--desert",      terrain === "desert"      && !isBlack);
-  el.classList.toggle("tile--arid",        terrain === "arid"        && !isBlack);
-  el.classList.toggle("tile--muddy",       terrain === "muddy"       && !isBlack);
-  el.classList.toggle("tile--flooded", terrain === "flooded" && !isBlack);
+  if (!isBlack && terrain) {
+    el.dataset.terrain = terrain;
+  } else {
+    delete el.dataset.terrain;
+  }
   el.classList.toggle("tile--black", isBlack);
 
   const cropEl = cropElements[idx];
@@ -71,8 +72,7 @@ function renderAll(force = false) {
       renderTile(i, true);
     }
   } else {
-    const dirtyList = Array.from(dirtyTileSet);
-    for (const idx of dirtyList) {
+    for (const idx of dirtyTileSet) {
       renderTile(idx, false);
     }
   }

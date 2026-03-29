@@ -39,17 +39,15 @@ function tryPlantHere() {
   if (terrain === "desert" || terrain === "flooded") return;
 
   if (cropId === "cactusfruit") {
-    // Cactus fruit can ONLY be placed on arid soil.
-    if (terrain !== "arid") return;
+    // Cactus fruit can be planted on grassy or arid soil, but not muddy/swampy.
+    if (terrain !== "grassy" && terrain !== "arid") return;
   } else if (cropId === "watercress") {
-    // Watercress can be placed on muddy soil directly, or on grassy soil adjacent to a wet tile.
-    // It cannot be planted on arid soil.
+    // Watercress cannot be planted on arid soil.
+    // On grassy soil it requires adjacency to a wet tile; muddy is always fine.
     if (terrain === "arid") return;
     if (TERRAIN[terrain]?.wetness < 3 && !isAdjacentToWetTerrain(x, y)) return;
-  } else {
-    // Regular crops cannot be planted on arid soil.
-    if (terrain === "arid") return;
   }
+  // All other crops: grassy, arid, and muddy are all valid (desert/flooded already blocked above).
 
   tile.crop = { cropId, progress: 0 };
   state.inventory[cropId] = seedCount - 1;
