@@ -21,8 +21,11 @@ function renderTile(idx, force = false) {
   if (!tile || !el) return;
 
   const isBlack = tile.kind === "field" && tile.blackMsRemaining > 0;
-  el.classList.toggle("tile--waterlogged", tile.kind === "field" && tile.waterlogged && !isBlack);
-  el.classList.toggle("tile--scorched", tile.kind === "field" && tile.scorched && !isBlack);
+  const terrain = tile.kind === "field" ? tile.terrain : null;
+  el.classList.toggle("tile--desert",      terrain === "desert"      && !isBlack);
+  el.classList.toggle("tile--arid",        terrain === "arid"        && !isBlack);
+  el.classList.toggle("tile--muddy",       terrain === "muddy"       && !isBlack);
+  el.classList.toggle("tile--flooded", terrain === "flooded" && !isBlack);
   el.classList.toggle("tile--black", isBlack);
 
   const cropEl = cropElements[idx];

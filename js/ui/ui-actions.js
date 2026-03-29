@@ -5,6 +5,9 @@ function tryMove(dx, dy) {
   const ny = state.farmer.y + dy;
   if (nx < 0 || ny < 0 || nx >= WORLD_SIZE || ny >= WORLD_SIZE) return;
 
+  const destTile = state.tiles[tileIndex(nx, ny)];
+  if (destTile?.terrain === "flooded") return;
+
   state.farmer.x = nx;
   state.farmer.y = ny;
   updateHighlights();
@@ -30,20 +33,22 @@ function tryPlantHere() {
   const x = state.farmer.x;
   const y = state.farmer.y;
 
-  // Waterlogged tiles are never plantable.
-  if (tile.waterlogged) return;
+  const terrain = tile.terrain;
+
+  // Desert and flooded tiles are never plantable.
+  if (terrain === "desert" || terrain === "flooded") return;
 
   if (cropId === "cactusfruit") {
-    // Cactus fruit can ONLY be placed on scorched earth.
-    if (!tile.scorched) return;
+    // Cactus fruit can ONLY be placed on arid soil.
+    if (terrain !== "arid") return;
   } else if (cropId === "watercress") {
-    // Watercress can ONLY be placed adjacent to waterlogged cells.
-    // It also cannot be planted on scorched/waterlogged tiles.
-    if (tile.scorched) return;
-    if (!isAdjacentToWaterlogged(x, y)) return;
+    // Watercress can be placed on muddy soil directly, or on grassy soil adjacent to a wet tile.
+    // It cannot be planted on arid soil.
+    if (terrain === "arid") return;
+    if (terrain !== "muddy" && !isAdjacentToWaterlogged(x, y)) return;
   } else {
-    // Regular crops cannot be planted on scorched earth.
-    if (tile.scorched) return;
+    // Regular crops cannot be planted on arid soil.
+    if (terrain === "arid") return;
   }
 
   tile.crop = { cropId, progress: 0 };

@@ -252,6 +252,7 @@ function processSunriseIfNeeded() {
     addScorchedCells(isSwap ? 3 : 5);
   }
 
+  applyTerrainSpread();
   updateWaterAdjacency();
   enforceHazardPlantValidity();
   setWeatherTheme();
@@ -286,6 +287,7 @@ function initGame() {
   state.weatherId = weatherForDay();
   state.weatherMachineSelection = state.weatherId;
   buildGridDom();
+  applyRandomFieldStart();
   bindUi();
   updateHud();
   setWeatherTheme();

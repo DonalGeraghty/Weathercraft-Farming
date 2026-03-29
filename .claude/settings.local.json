@@ -17,7 +17,18 @@
       "Bash(python -c \":*)",
       "Bash(python -c \"import os; print\\(os.listdir\\(''assets/sprites''\\)\\)\")",
       "Bash(python -c \"import os; files=[f for f in os.listdir\\(''assets/sprites''\\) if ''Gemini'' in f or ''gemini'' in f]; print\\(files\\)\")",
-      "Bash(python3 -c \"from PIL import Image; img = Image.open\\(''C:/Users/conal/Desktop/Weathercraft-Farming/assets/sprites/characters.png''\\); print\\(''characters.png:'', img.size\\)\")"
+      "Bash(python3 -c \"from PIL import Image; img = Image.open\\(''C:/Users/conal/Desktop/Weathercraft-Farming/assets/sprites/characters.png''\\); print\\(''characters.png:'', img.size\\)\")",
+      "Bash(node -e \":*)",
+      "Bash(python3 -c \":*)",
+      "Bash(powershell -Command \":*)",
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(''C:/Users/conal/Desktop/Weathercraft-Farming/assets/sprites/sample tiles.png''\\); Write-Host $img.Width $img.Height; $img.Dispose\\(\\)\")",
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.Drawing; $path = ''C:/Users/conal/Desktop/Weathercraft-Farming/assets/sprites/sample tiles.png''; $img = [System.Drawing.Image]::FromFile\\($path\\); Write-Host $img.Width $img.Height\")",
+      "Bash(xxd -s 16 -l 8 \"/c/Users/conal/Desktop/Weathercraft-Farming/assets/sprites/sample tiles.png\")",
+      "Bash(python3 -c \"from PIL import Image; img = Image.open\\(''assets/sprites/sample tiles.png''\\); print\\(img.size\\)\")",
+      "Bash(node -e \"const {createCanvas, loadImage} = require\\(''canvas''\\); loadImage\\(''./assets/sprites/sample tiles.png''\\).then\\(img => console.log\\(img.width, img.height\\)\\).catch\\(e => console.log\\(''error:'', e.message\\)\\)\")",
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\\(Resolve-Path ''assets/sprites/sample tiles.png''\\)\\); Write-Host $img.Width $img.Height; $img.Dispose\\(\\)\")",
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(''C:\\\\Users\\\\conal\\\\Desktop\\\\Weathercraft-Farming\\\\assets\\\\sprites\\\\sample tiles.png''\\); Write-Host $img.Width $img.Height; $img.Dispose\\(\\)\")",
+      "Bash(powershell -File:*)"
     ]
   }
 }

@@ -21,11 +21,15 @@
   --rain: #8bd3ff;
   --sun: #ffdc50;
 
-  /* Hazard Colors */
-  --scorched-border: rgba(255,230,120,0.75);
-  --scorched-grad: linear-gradient(180deg, #c58a00, #6b3f00);
-  --waterlogged-border: rgba(120,200,255,0.70);
-  --waterlogged-grad: linear-gradient(180deg, #0a2d7c, #05183d);
+  /* Terrain Colors */
+  --desert-border: rgba(255, 160, 60, 0.80);
+  --desert-grad: linear-gradient(180deg, #7a2e00, #3d1200);
+  --arid-border: rgba(220, 185, 80, 0.75);
+  --arid-grad: linear-gradient(180deg, #9e6200, #573200);
+  --muddy-border: rgba(90, 60, 20, 0.85);
+  --muddy-grad: linear-gradient(180deg, #2a1800, #130b00);
+  --flooded-border: rgba(120,200,255,0.70);
+  --flooded-grad: linear-gradient(180deg, #0a2d7c, #05183d);
 
   /* Crop Sizes */
   --size-cactus-grown: 95.45%;
@@ -175,25 +179,40 @@ img, .tile--path { image-rendering: pixelated; }
   box-shadow: 0 0 0 2px rgba(139,211,255,0.6) inset;
 }
 
-.tile--waterlogged,
-.tile--scorched {
+.tile--desert,
+.tile--arid,
+.tile--muddy,
+.tile--flooded {
   background: transparent !important;
 }
 
-.tile--waterlogged { border-color: var(--waterlogged-border); }
-.tile--scorched { border-color: var(--scorched-border); }
+.tile--desert     { border-color: var(--desert-border); }
+.tile--arid       { border-color: var(--arid-border); }
+.tile--muddy      { border-color: var(--muddy-border); }
+.tile--flooded { border-color: var(--flooded-border); }
 
-.tile--waterlogged::before,
-.tile--scorched::before {
+.tile--desert::before,
+.tile--arid::before,
+.tile--muddy::before,
+.tile--flooded::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
 }
 
-.tile--waterlogged::before { background: var(--waterlogged-grad); }
-.tile--scorched::before { background: var(--scorched-grad); }
+.tile--desert.tile--variant-1::before   { background-image: url('../assets/sprites/tile-desert-01.bmp'); }
+.tile--desert.tile--variant-2::before   { background-image: url('../assets/sprites/tile-desert-02.bmp'); }
+.tile--arid.tile--variant-1::before     { background-image: url('../assets/sprites/tile-arid-01.bmp'); }
+.tile--arid.tile--variant-2::before     { background-image: url('../assets/sprites/tile-arid-02.bmp'); }
+.tile--flooded.tile--variant-1::before  { background-image: url('../assets/sprites/tile-flooded-01.bmp'); }
+.tile--flooded.tile--variant-2::before  { background-image: url('../assets/sprites/tile-flooded-02.bmp'); }
+.tile--muddy.tile--variant-1::before    { background-image: url('../assets/sprites/tile-muddy-01.bmp'); }
+.tile--muddy.tile--variant-2::before    { background-image: url('../assets/sprites/tile-muddy-02.bmp'); }
 
 .tile--black{
   /* Solid black for rotted tiles (no crop planting allowed while active). */

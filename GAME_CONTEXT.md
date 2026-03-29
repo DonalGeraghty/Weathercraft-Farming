@@ -6,7 +6,7 @@
 
 ## 1. Game Overview
 
-**Weathercraft Farming** is a top-down, tile-based browser farming game (no framework, no bundler) where the player walks a farmer around a grid path, buys seeds from a shop tile, plants and harvests crops on a 12×12 inner field, and uses a weather machine to bias tomorrow's weather — all in real time. The core loop is: earn money by harvesting → spend on seeds → manage weather hazards (waterlogged/scorched tiles) and crop timing to maximize yield before crops rot.
+**Weathercraft Farming** is a top-down, tile-based browser farming game (no framework, no bundler) where the player walks a farmer around a grid path, buys seeds from a shop tile, plants and harvests crops on a 12×12 inner field, and uses a weather machine to bias tomorrow's weather — all in real time. The core loop is: earn money by harvesting → spend on seeds → manage weather hazards (flooded/scorched tiles) and crop timing to maximize yield before crops rot.
 
 ### Feature-complete state (as of last commit)
 - Tile grid rendering with dirty-flag diffing
@@ -103,7 +103,7 @@ GameRuntime.start()
 {
   kind: "field" | "path",
   crop: null | { cropId: string, progress: number }, // progress: 0–1
-  waterlogged: boolean,
+  flooded: boolean,
   scorched: boolean,
   blackMsRemaining: number,       // ms until black tile clears (blocks planting)
   readyRotMsRemaining: number,    // ms until ready crop rots away
@@ -113,7 +113,7 @@ GameRuntime.start()
 ```
 
 **Constraints:**
-- A tile is **never both** `waterlogged` AND `scorched`. `reconcileExclusiveHazards()` enforces this; waterlogged wins.
+- A tile is **never both** `flooded` AND `scorched`. `reconcileExclusiveHazards()` enforces this; flooded wins.
 - A black tile (`blackMsRemaining > 0`) cannot have a `crop`. Enforced in `updateRotAndBlack()` and `enforceHazardPlantValidity()`.
 - Do not set `tile.dirty = true` directly in game-mechanics code — always call `markTileDirtySafe(idx)` so the render set is also updated.
 
@@ -147,27 +147,27 @@ progressDelta  = (1/daysToGrow) × globalWeatherMult × cropWeatherMult × envMu
 | carrot       | 6         | €3       | €8           | sun ×1.35, rain ×0.7 |
 | onion        | 8         | €4       | €10          | neutral |
 | cabbage      | 10        | €5       | €13          | sun ×0.7, rain ×1.35 |
-| watercress   | 10        | €6       | €16          | must be adjacent to waterlogged; grows ×4 when adjacent |
+| watercress   | 10        | €6       | €16          | must be adjacent to flooded; grows ×4 when adjacent |
 | cactusfruit  | 10        | €8       | €22          | must be ON scorched tile; grows ×3.5 on scorched |
 
 **Planting rules (in `tryPlantHere()`):**
-- Tile must be `kind: "field"`, empty, not black, not waterlogged
+- Tile must be `kind: "field"`, empty, not black, not flooded
 - `cactusfruit` → tile MUST be scorched
-- `watercress` → tile must NOT be scorched/waterlogged; must be adjacent to waterlogged
+- `watercress` → tile must NOT be scorched/flooded; must be adjacent to flooded
 - All others → tile must NOT be scorched
 
 **DO NOT CHANGE:** The `enforceHazardPlantValidity()` function is called after every save-load and after every sunrise — it is the canonical source of truth for crop validity. Changing planting rules requires updating both `tryPlantHere()` AND `enforceHazardPlantValidity()`.
 
 ### 3.3 Weather & Hazard System
 
-**What:** Weather is either `"sun"` or `"rain"`. At every sunrise, 3–5 tiles are randomly converted to the matching hazard (waterlogged for rain, scorched for sun). Hazards can be influenced (not set directly) by the weather machine.
+**What:** Weather is either `"sun"` or `"rain"`. At every sunrise, 3–5 tiles are randomly converted to the matching hazard (flooded for rain, scorched for sun). Hazards can be influenced (not set directly) by the weather machine.
 
 **Key functions:**
 - `maybeChangeWeatherAtSunrise()` — 20% chance to flip weather naturally (`NATURAL_WEATHER_FLIP_CHANCE`)
 - `applyWeatherMachineAtSunrise()` — applies committed spend as a probability; resets `weatherMachineSpendCommitted` to 0
 - `addHazardCells(type, count)` — shuffles eligible tiles, applies hazard, clears opposite hazard within 2 tiles
 - `addWaterloggedCells(n)` / `addScorchedCells(n)` — wrappers; called with 3 (if weather swapped) or 5 (if same)
-- `updateWaterAdjacency()` — must be called after ANY waterlogged change to keep `isAdjacentToWater` accurate
+- `updateWaterAdjacency()` — must be called after ANY flooded change to keep `isAdjacentToWater` accurate
 - `setWeatherTheme()` (in `dog.js` physically) — toggles `.weather--rain` on `.game-wrap`, triggers ambience sync
 
 **Weather machine:**
@@ -206,7 +206,7 @@ progressDelta  = (1/daysToGrow) × globalWeatherMult × cropWeatherMult × envMu
 
 **Tile CSS classes:**
 - `.tile--field` / `.tile--path` — set at build time, never change
-- `.tile--waterlogged`, `.tile--scorched`, `.tile--black` — toggled per renderTile
+- `.tile--flooded`, `.tile--scorched`, `.tile--black` — toggled per renderTile
 - `.tile--highlight` — toggled by `updateHighlights()` on the farmer's current field tile
 
 **Sprite URL pattern:** `./assets/sprites/pixel-{cropId}-{stage}.svg` where stage is `seed | sprout | grown`
@@ -242,7 +242,7 @@ emitUiSync({ hud: true, shop: true, weatherMachine: true, highlights: true })
 - `resetDogMorningRoam()` — called from `wrapDayIfNeeded()` at midnight
 - `_dogWander()` — never reverses direction; walks toward morning destination if set
 - `_dogStepTowardHome()` — traverses any tile type (ignores hazards for pathfinding)
-- `_isValidDogTile(x, y)` — used for daytime wander; avoids waterlogged/scorched/black tiles
+- `_isValidDogTile(x, y)` — used for daytime wander; avoids flooded/scorched/black tiles
 - `_triggerBarkIfOnSameTile()` — shared bark trigger; also fires via `GameServices.on("farmer:moved")`
 - `_playBark()` — Web Audio sawtooth synthesizer; no audio file needed
 
@@ -273,7 +273,7 @@ emitUiSync({ hud: true, shop: true, weatherMachine: true, highlights: true })
 ```
 WeathercraftFarmingCSV,4
 {day},{dayElapsedMs},{weatherId},{weatherMachineSelection},{moneyEur},{selectedSeedId},{farmerX},{farmerY},{invCarrot},{invOnion},{invCabbage},{invWatercress},{invCactusfruit},{weatherMachineSpendCommitted},{paused}
-x,y,waterlogged,scorched,soilRecoveryDaysRemaining,harvestRotDaysRemaining,seedTypeId,growthProgress01
+x,y,flooded,scorched,soilRecoveryDaysRemaining,harvestRotDaysRemaining,seedTypeId,growthProgress01
 ... (one row per field tile, 144 rows)
 ```
 
@@ -330,7 +330,7 @@ Every `addEventListener` registered in `bindUi()` or `dog.js` is paired with a `
 
 ### Performance-sensitive areas
 - `growAllCrops(dtMs)` — runs every tick, loops all 196 tiles. Do not add allocations (no `Array.map`, no object spread) inside the inner loop. The existing code uses direct property access and avoids array creation intentionally.
-- `updateWaterAdjacency()` — loops all tiles and checks 4 neighbors. Only call when waterlogged tiles actually change (after `addHazardCells`, after import).
+- `updateWaterAdjacency()` — loops all tiles and checks 4 neighbors. Only call when flooded tiles actually change (after `addHazardCells`, after import).
 - `renderTile()` — guarded by `lastCropIdByIdx` / `lastCropStageByIdx` to avoid img src thrashing. Do not remove these guards.
 - `dirtyTileSet` — use `Set` operations; do not convert to array until iteration in `renderAll`.
 

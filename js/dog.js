@@ -31,8 +31,6 @@ const DOG_HOUSE_SPRITE_SRC = "./assets/sprites/pixel-doghouse.svg";
 let _dogState = null;     // position, timers, facing
 let _dogEl    = null;     // the moving dog <div>
 let _dogHouseEl = null;   // static dog-house <img> on tile (0,1)
-let _barkBubbleEl = null;
-let _barkBubbleTimeout = 0;
 let _lastDogTileIdx = -1;
 let _farmerMoveDisposer = null; // unsubscribe handle for GameServices event
 
@@ -55,10 +53,6 @@ function initDog() {
   }
   if (_dogEl && _dogEl.parentNode)         _dogEl.parentNode.removeChild(_dogEl);
   if (_dogHouseEl && _dogHouseEl.parentNode) _dogHouseEl.parentNode.removeChild(_dogHouseEl);
-  if (_barkBubbleEl) {
-    clearTimeout(_barkBubbleTimeout);
-    _barkBubbleEl = null;
-  }
   _dogEl          = null;
   _dogHouseEl     = null;
   _lastDogTileIdx = -1;
@@ -290,7 +284,7 @@ function _isValidDogTile(x, y) {
   const tile = state.tiles[tileIndex(x, y)];
   if (!tile) return false;
   // Avoid hazardous field tiles while wandering (daytime only).
-  if (tile.kind === "field" && (tile.waterlogged || tile.scorched || tile.blackMsRemaining > 0)) return false;
+  if (tile.kind === "field" && (tile.terrain === "flooded" || tile.terrain === "desert" || tile.blackMsRemaining > 0)) return false;
   return true;
 }
 
@@ -304,8 +298,6 @@ function _shuffleDirs(arr) {
   return a;
 }
 
-//  Bark bubble
-
 // ---- Bark helpers ----
 
 function _triggerBarkIfOnSameTile() {
@@ -315,7 +307,6 @@ function _triggerBarkIfOnSameTile() {
   if (_dogState.x === state.farmer.x && _dogState.y === state.farmer.y) {
     _dogState.barkCooldownMs = DOG_BARK_COOLDOWN_MS;
     _playBark();
-    _showBarkBubble();
   }
 }
 
@@ -353,40 +344,7 @@ function _playBark() {
   }
 }
 
-//  Bark trigger  (shared by dog-step and farmer-move paths)
-
 // ---- DOM helpers ----
-
-function _showBarkBubble() {
-  if (!_dogEl) return;
-  if (!_barkBubbleEl) {
-    _barkBubbleEl = document.createElement("div");
-    _barkBubbleEl.textContent = "Woof!";
-    _barkBubbleEl.style.cssText = [
-      "position:absolute",
-      "bottom:100%",
-      "left:50%",
-      "transform:translateX(-50%)",
-      "background:#fffde7",
-      "border:1.5px solid #bda832",
-      "border-radius:6px",
-      "padding:1px 4px",
-      "font-size:9px",
-      "font-weight:bold",
-      "white-space:nowrap",
-      "pointer-events:none",
-      "z-index:20",
-      "color:#4a3800",
-      "box-shadow:0 1px 3px rgba(0,0,0,0.3)",
-    ].join(";");
-    _dogEl.appendChild(_barkBubbleEl);
-  }
-  _barkBubbleEl.style.display = "";
-  clearTimeout(_barkBubbleTimeout);
-  _barkBubbleTimeout = setTimeout(() => {
-    if (_barkBubbleEl) _barkBubbleEl.style.display = "none";
-  }, 1400);
-}
 
 //  DOM sync — move dog element into the correct tile
 

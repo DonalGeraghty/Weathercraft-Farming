@@ -63,6 +63,10 @@ function buildGridDom() {
 
         el.style.backgroundImage = `url('./assets/sprites/pixel-path-${suffix}.svg')`;
       }
+      if (tile.kind === "field") {
+        const variant = (((x * 3 + y * 7) ^ (x + y)) % 2) + 1;
+        el.classList.add(`tile--variant-${variant}`);
+      }
       el.setAttribute("role", "gridcell");
 
       if (x === SHOP_TILE_X && y === SHOP_TILE_Y) {
@@ -285,6 +289,7 @@ function placeRoomFarmer() {
 }
 
 function tryMoveInRoom(dx, dy) {
+  if (dy === 1 && isAtRoomExit()) { hideBuildingInterior(); return; }
   const nx = roomFarmerX + dx;
   const ny = roomFarmerY + dy;
   if (nx < 0 || nx >= ROOM_SIZE || ny < 0 || ny >= ROOM_SIZE) return;

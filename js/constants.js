@@ -51,7 +51,7 @@ const CROPS = {
     weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
     seedCost: 6,
     harvestValue: 16,
-    // Extra growth when adjacent to waterlogged cells.
+    // Extra growth when adjacent to flooded cells.
     adjacentWaterloggedGrowthMultiplier: 4.0,
   },
   cactusfruit: {
@@ -61,8 +61,8 @@ const CROPS = {
     weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
     seedCost: 8,
     harvestValue: 22,
-    // Extra growth when planted directly on scorched cells.
-    scorchedGrowthMultiplier: 3.5,
+    // Extra growth when planted directly on arid soil.
+    aridGrowthMultiplier: 3.5,
   },
 };
 
@@ -132,5 +132,5 @@ const INITIAL_FIELD_CROP_FILL_CHANCE = 0.14;
 const INITIAL_FIELD_MAX_PROGRESS = 0.92;
 // On scorched tiles, chance to plant cactus fruit instead of leaving empty.
 const INITIAL_FIELD_SCORCHED_CACTUS_CHANCE = 0.55;
-// When adjacent to waterlogged tiles, bias toward watercress vs basic crops.
+// When adjacent to flooded tiles, bias toward watercress vs basic crops.
 const INITIAL_FIELD_WATERCRESS_BIAS = 0.45;

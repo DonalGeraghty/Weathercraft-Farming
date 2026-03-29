@@ -90,7 +90,7 @@ There is no win condition — the goal is to accumulate money efficiently by cho
 | Carrot | €3 | €8 | 6 | Any normal field tile | Sun x1.35 · Rain x0.70 |
 | Onion | €4 | €10 | 8 | Any normal field tile | Neutral (x1.0 both) |
 | Cabbage | €5 | €13 | 10 | Any normal field tile | Sun x0.70 · Rain x1.35 |
-| Watercress | €6 | €16 | 10 | Dry tile **adjacent** to a waterlogged tile | Neutral; grows x4 when adjacent to waterlogged |
+| Watercress | €6 | €16 | 10 | Dry tile **adjacent** to a flooded tile | Neutral; grows x4 when adjacent to flooded |
 | Cactus Fruit | €8 | €22 | 10 | **On** a scorched tile only | Neutral; grows x3.5 on scorched soil |
 
 \* Days to grow at neutral weather (no weather multiplier, no environment bonus).
@@ -127,16 +127,16 @@ Each sunrise, **3–5 field tiles** are converted to the active weather's hazard
 | Weather | Hazard | Effect on crops |
 |---------|--------|-----------------|
 | Sun | Scorched (orange) | Destroys all crops **except** Cactus Fruit; Cactus Fruit can only be planted here |
-| Rain | Waterlogged (blue) | Destroys all crops; Watercress is also destroyed if its own tile becomes waterlogged (it survives only on adjacent dry tiles) |
+| Rain | Waterlogged (blue) | Destroys all crops; Watercress is also destroyed if its own tile becomes flooded (it survives only on adjacent dry tiles) |
 
-Waterlogged and scorched are mutually exclusive on any single tile — if both would apply, waterlogged takes priority. When a new hazard is placed, the opposite hazard is cleared within 2 tiles of it.
+Waterlogged and scorched are mutually exclusive on any single tile — if both would apply, flooded takes priority. When a new hazard is placed, the opposite hazard is cleared within 2 tiles of it.
 
 ### Strategy tips
 
 - **Carrots** are best in sun-heavy runs; avoid them during sustained rain.
 - **Cabbage** is the mirror — good in rain, punished in sun.
 - **Onion** is the safe, weather-neutral choice when you can't predict conditions.
-- **Watercress** is strong in rain spells: more waterlogged tiles means more valid planting spots and faster growth. Position them around the edges of flooded areas.
+- **Watercress** is strong in rain spells: more flooded tiles means more valid planting spots and faster growth. Position them around the edges of flooded areas.
 - **Cactus Fruit** is strong in sun spells: more scorched tiles means more planting spots and faster growth.
 - Use the Weather Machine to extend favorable streaks rather than force a single flip — it's probabilistic, not guaranteed.
 
@@ -161,7 +161,7 @@ A farm dog roams the field and does not affect gameplay, but will **bark** when 
 
 - **Daytime:** wanders freely, never reversing direction. At 8 AM each day it first walks to a random spot in the centre of the field before resuming normal wandering.
 - **Nighttime:** hurries straight home to the dog house (top-left of the path ring).
-- Avoids waterlogged, scorched, and black tiles while wandering, but will cross any terrain to get home at night.
+- Avoids flooded, scorched, and black tiles while wandering, but will cross any terrain to get home at night.
 
 ---
 
@@ -187,7 +187,7 @@ Game state can be saved and restored as a CSV file via the **Save / Load** panel
 - **Save:** downloads a `.csv` file named `WeathercraftFarming_state_day{N}.csv`.
 - **Load:** select a previously saved `.csv` and click Upload. The entire game state is replaced immediately.
 
-The save file includes: day number, time of day, current weather, money, inventory counts, farmer position, weather machine selection and committed spend, pause state, and the full tile grid (crop type, growth progress, waterlogged/scorched flags, rot timers, soil recovery timers).
+The save file includes: day number, time of day, current weather, money, inventory counts, farmer position, weather machine selection and committed spend, pause state, and the full tile grid (crop type, growth progress, flooded/scorched flags, rot timers, soil recovery timers).
 
 Saves from older format versions (v1–v3) are supported and will be imported correctly.
 

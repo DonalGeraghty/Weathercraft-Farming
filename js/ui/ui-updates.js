@@ -51,14 +51,14 @@ function updateShopInfo() {
   const sunMult = crop?.weatherGrowthMultipliers?.sun ?? 1;
   const rainMult = crop?.weatherGrowthMultipliers?.rain ?? 1;
   const waterAdjMult = crop?.adjacentWaterloggedGrowthMultiplier ?? null;
-  const scorchedMult = crop?.scorchedGrowthMultiplier ?? null;
+  const aridMult = crop?.aridGrowthMultiplier ?? null;
   const infoText = crop
     ? [
         `Harvest €${crop.harvestValue}.`,
         `Grows in ${crop.daysToGrow} days.`,
         `Sun x${sunMult.toFixed(2)}, Rain x${rainMult.toFixed(2)}.`,
-        waterAdjMult ? `Adjacent waterlogged: x${waterAdjMult.toFixed(2)}.` : "",
-        scorchedMult ? `On scorched soil: x${scorchedMult.toFixed(2)}.` : "",
+        waterAdjMult ? `Adjacent wet tile: x${waterAdjMult.toFixed(2)}.` : "",
+        aridMult ? `On arid soil: x${aridMult.toFixed(2)}.` : "",
       ]
         .filter(Boolean)
         .join(" ")
