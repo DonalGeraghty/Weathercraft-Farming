@@ -28,7 +28,7 @@ function updateHud() {
     } else {
       const weatherDef = WEATHER[state.weatherId];
       const weatherName = weatherDef?.name ?? state.weatherId;
-      const weatherCssClass = state.weatherId === "sun" ? "text--sun" : (state.weatherId === "rain" ? "text--rain" : "");
+      const weatherCssClass = weatherDef?.cssClass ?? "";
       hudWeatherValueElement.innerHTML = `<span class="${weatherCssClass}">${weatherName}</span>`;
       if (hudWeatherIconElement) hudWeatherIconElement.textContent = weatherIcon(state.weatherId);
     }
@@ -48,15 +48,16 @@ function updateShopInfo() {
   if (!buySeedButtonElement) buySeedButtonElement = document.getElementById("buy-seed-btn");
   if (!buySeed5ButtonElement) buySeed5ButtonElement = document.getElementById("buy-seed-5-btn");
   if (!buySeed10ButtonElement) buySeed10ButtonElement = document.getElementById("buy-seed-10-btn");
-  const sunMult = crop?.weatherGrowthMultipliers?.sun ?? 1;
-  const rainMult = crop?.weatherGrowthMultipliers?.rain ?? 1;
-  const waterAdjMult = crop?.adjacentWaterloggedGrowthMultiplier ?? null;
+  const waterAdjMult = crop?.adjacentFloodedGrowthMultiplier ?? null;
   const aridMult = crop?.aridGrowthMultiplier ?? null;
+  const weatherMultStr = crop
+    ? Object.values(WEATHER).map(w => `${w.name} x${(crop.weatherGrowthMultipliers?.[w.id] ?? 1).toFixed(2)}`).join(", ")
+    : "";
   const infoText = crop
     ? [
         `Harvest €${crop.harvestValue}.`,
         `Grows in ${crop.daysToGrow} days.`,
-        `Sun x${sunMult.toFixed(2)}, Rain x${rainMult.toFixed(2)}.`,
+        weatherMultStr + ".",
         waterAdjMult ? `Adjacent wet tile: x${waterAdjMult.toFixed(2)}.` : "",
         aridMult ? `On arid soil: x${aridMult.toFixed(2)}.` : "",
       ]
@@ -92,19 +93,21 @@ function updateShopInfo() {
 }
 
 function updateWeatherMachineUi() {
-  if (!weatherMachineSunButtonElement) weatherMachineSunButtonElement = document.getElementById("weather-machine-sun-btn");
-  if (!weatherMachineRainButtonElement) weatherMachineRainButtonElement = document.getElementById("weather-machine-rain-btn");
+  for (const id of Object.keys(WEATHER)) {
+    if (!weatherMachineButtonElements[id]) {
+      weatherMachineButtonElements[id] = document.getElementById(`weather-machine-${id}-btn`);
+    }
+  }
   if (!weatherMachineInfoElement) weatherMachineInfoElement = document.getElementById("weather-machine-info");
   const isAtMachine = isAtWeatherMachineTile();
   const isEnabled = isAtMachine && !state.sunriseTransition;
 
-  if (weatherMachineSunButtonElement) {
-    weatherMachineSunButtonElement.classList.toggle("btn--active", state.weatherMachineSelection === "sun");
-    weatherMachineSunButtonElement.disabled = !isEnabled;
-  }
-  if (weatherMachineRainButtonElement) {
-    weatherMachineRainButtonElement.classList.toggle("btn--active", state.weatherMachineSelection === "rain");
-    weatherMachineRainButtonElement.disabled = !isEnabled;
+  for (const id of Object.keys(WEATHER)) {
+    const btn = weatherMachineButtonElements[id];
+    if (btn) {
+      btn.classList.toggle("btn--active", state.weatherMachineSelection === id);
+      btn.disabled = !isEnabled;
+    }
   }
 
   if (weatherMachineInfoElement) {
@@ -112,7 +115,7 @@ function updateWeatherMachineUi() {
     const spent = state.weatherMachineSpendCommitted ?? 0;
     const weatherDef = WEATHER[state.weatherMachineSelection];
     const weatherName = weatherDef?.name ?? state.weatherMachineSelection;
-    const weatherCssClass = state.weatherMachineSelection === "sun" ? "text--sun" : (state.weatherMachineSelection === "rain" ? "text--rain" : "");
+    const weatherCssClass = weatherDef?.cssClass ?? "";
     let infoHtml = `Tomorrow: ${weatherIcon(state.weatherMachineSelection)} <span class="${weatherCssClass}">${weatherName}</span> · Change chance: ${chance}% (spent €${spent})`;
 
     if (!isAtMachine) {

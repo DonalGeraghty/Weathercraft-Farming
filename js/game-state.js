@@ -1,9 +1,9 @@
 const state = {
   day: 1,
   dayElapsedMs: (9 / 24) * MS_PER_DAY,
-  weatherId: "sun",
+  weatherId: "sunny",
   weatherMachineSpendCommitted: 0,
-  weatherMachineSelection: "sun",
+  weatherMachineSelection: "sunny",
   moneyEur: 100,
   selectedSeedId: "carrot",
   inventory: {
@@ -143,8 +143,8 @@ function importStateFromCsv(csvText) {
 
   state.day = Number(day) || 1;
   state.dayElapsedMs = Number(dayElapsedMsRaw) || 0;
-  state.weatherId = weatherId === "rain" ? "rain" : "sun";
-  state.weatherMachineSelection = weatherMachineSelection === "rain" ? "rain" : "sun";
+  state.weatherId = WEATHER[weatherId] ? weatherId : "sunny";
+  state.weatherMachineSelection = WEATHER[weatherMachineSelection] ? weatherMachineSelection : "sunny";
   state.moneyEur = Number(moneyEur) || 0;
   state.selectedSeedId = selectedSeedId && CROPS[selectedSeedId] ? selectedSeedId : "carrot";
   state.farmer.x = Number(farmerX) || 0;

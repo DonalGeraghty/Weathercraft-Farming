@@ -45,7 +45,7 @@ function tryPlantHere() {
     // Watercress can be placed on muddy soil directly, or on grassy soil adjacent to a wet tile.
     // It cannot be planted on arid soil.
     if (terrain === "arid") return;
-    if (terrain !== "muddy" && !isAdjacentToWaterlogged(x, y)) return;
+    if (TERRAIN[terrain]?.wetness < 3 && !isAdjacentToWetTerrain(x, y)) return;
   } else {
     // Regular crops cannot be planted on arid soil.
     if (terrain === "arid") return;

@@ -246,11 +246,18 @@ function processSunriseIfNeeded() {
   const nextWeather = state.weatherId;
   const isSwap = prevWeather !== nextWeather;
 
-  if (nextWeather === "rain") {
-    addWaterloggedCells(isSwap ? 3 : 5);
-  } else {
-    addScorchedCells(isSwap ? 3 : 5);
+  // Apply wetness shift first so any newly-flooded/deserted tiles are visible
+  // to applyTerrainSpread, which then propagates the muddy/arid neighbour conversion.
+  if (nextWeather === "stormy") {
+    applyWeatherWetnessShift(20, +1);
+  } else if (nextWeather === "rainy") {
+    applyWeatherWetnessShift(10, +1);
+  } else if (nextWeather === "sunny") {
+    applyWeatherWetnessShift(10, -1);
+  } else if (nextWeather === "drought") {
+    applyWeatherWetnessShift(20, -1);
   }
+  // cloudy: no wetness change
 
   applyTerrainSpread();
   updateWaterAdjacency();
@@ -293,7 +300,6 @@ function initGame() {
   setWeatherTheme();
   renderAll(true);
   updateHighlights();
-  updateWaterAdjacency();
   initDog();
 }
 

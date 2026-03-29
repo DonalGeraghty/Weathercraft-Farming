@@ -36,8 +36,8 @@ function syncWeatherAmbience() {
   const sun = sunAmbienceElementCache;
   if (!rain || !sun || !bgm) return;
 
-  const wantRain = state.weatherId === "rain";
-  const wantSun = state.weatherId === "sun";
+  const wantRain = state.weatherId === "rainy" || state.weatherId === "stormy";
+  const wantSun = state.weatherId === "sunny" || state.weatherId === "drought";
   // Use state.musicPlaying (explicit user intent) rather than bgm.paused.
   // bgm.paused can be true for transient browser reasons (e.g. src assignment)
   // even when the user has not asked to stop music.
@@ -68,7 +68,9 @@ function setWeatherTheme() {
   if (!gameWrapElementCache) gameWrapElementCache = document.querySelector(".game-wrap");
   const wrap = gameWrapElementCache;
   if (!wrap) return;
-  wrap.classList.toggle("weather--rain", state.weatherId === "rain");
+  for (const id of Object.keys(WEATHER)) {
+    wrap.classList.toggle(`weather--${id}`, state.weatherId === id);
+  }
   syncWeatherAmbience();
 }
 

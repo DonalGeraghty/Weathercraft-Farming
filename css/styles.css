@@ -71,9 +71,12 @@ body.body--night{
 /* Global Pixel Rendering */
 img, .tile--path { image-rendering: pixelated; }
 
-.text--sun { color: var(--sun); }
-.text--rain { color: var(--rain); }
-.text--night { color: #b8ccff; }
+.text--stormy  { color: var(--sun); }
+.text--rainy   { color: var(--rain); }
+.text--cloudy  { color: #aaaaaa; }
+.text--sunny   { color: var(--sun); }
+.text--drought { color: #ff5555; }
+.text--night   { color: #b8ccff; }
 
 /* ==========================================================================
    2. WORLD ENGINE (Grid & Tiles)
@@ -131,10 +134,22 @@ img, .tile--path { image-rendering: pixelated; }
   }
 }
 
-.game-wrap.weather--rain{
-  /* Keep it green (not blue). Waterlogged tiles handle the blue overlay. */
+.game-wrap.weather--stormy {
+  --field: #1a3d22;
+  --field-alt: #1d4525;
+}
+.game-wrap.weather--rainy {
+  /* Keep it green (not blue). Flooded tiles handle the blue overlay. */
   --field: #2c4a26;
   --field-alt: #2f552a;
+}
+.game-wrap.weather--cloudy {
+  --field: #283d28;
+  --field-alt: #2b452b;
+}
+.game-wrap.weather--drought {
+  --field: #4a3d22;
+  --field-alt: #55461f;
 }
 
 .grid{
@@ -629,7 +644,7 @@ img, .tile--path { image-rendering: pixelated; }
 
 .weather-machine-row{
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
   margin-top: 8px;
 }

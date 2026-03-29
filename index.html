@@ -15,6 +15,9 @@
           <div class="title__hint"><span id="day-length-minutes">5</span> minutes = 1 day · Weather affects growth</div>
         </div>
         <div class="hud" aria-label="Game status">
+          <div class="hud__item hud__item--btn">
+            <button id="skip-to-7am-btn" class="btn" type="button">Skip to 7am</button>
+          </div>
           <div class="hud__item"><span class="hud__label">Day</span> <span id="day-value">1</span></div>
           <div class="hud__item"><span class="hud__label">Time</span> <span id="time-value">12 AM</span></div>
           <div class="hud__item">
@@ -110,14 +113,14 @@
           <div class="card">
             <div class="card__title">Weather Machine</div>
             <div class="weather-machine-row" role="group" aria-label="Set tomorrow weather">
-              <button id="weather-machine-sun-btn" class="btn btn--weather" type="button">
-                ☀️ <span class="text--sun">Sun</span>
+              <button id="weather-machine-stormy-btn" class="btn btn--weather" type="button">
+                ⛈️ <span class="text--stormy">Stormy</span>
               </button>
-              <button id="weather-machine-rain-btn" class="btn btn--weather" type="button">
-                🌧️ <span class="text--rain">Rain</span>
+              <button id="weather-machine-drought-btn" class="btn btn--weather" type="button">
+                🔥 <span class="text--drought">Drought</span>
               </button>
             </div>
-            <div class="small" id="weather-machine-info">Tomorrow: ☀️ Sun</div>
+            <div class="small" id="weather-machine-info">Tomorrow: ☀️ Clear</div>
           </div>
 
           <div class="card">

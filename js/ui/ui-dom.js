@@ -16,7 +16,8 @@ let lastCropStageByIdx = new Array(TILE_COUNT).fill(null);
 // HUD element cache
 let hudDayElement, hudTimeElement, hudWeatherIconElement, hudWeatherValueElement, hudMoneyElement;
 let lastHudDay, lastHudTime, lastHudWeatherId, lastHudIsNight, lastHudMoney;
-let weatherMachineSunButtonElement, weatherMachineRainButtonElement, weatherMachineInfoElement;
+let weatherMachineButtonElements = {};
+let weatherMachineInfoElement;
 let lastWeatherMachineInfoHtml = "";
 let shopSeedInfoElement, inventoryGridElement, buySeedButtonElement, buySeed5ButtonElement, buySeed10ButtonElement, seedSelectElementCache;
 let pauseButtonElement;

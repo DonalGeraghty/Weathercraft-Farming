@@ -28,7 +28,10 @@
       "Bash(node -e \"const {createCanvas, loadImage} = require\\(''canvas''\\); loadImage\\(''./assets/sprites/sample tiles.png''\\).then\\(img => console.log\\(img.width, img.height\\)\\).catch\\(e => console.log\\(''error:'', e.message\\)\\)\")",
       "Bash(powershell -Command \"Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\\(Resolve-Path ''assets/sprites/sample tiles.png''\\)\\); Write-Host $img.Width $img.Height; $img.Dispose\\(\\)\")",
       "Bash(powershell -Command \"Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(''C:\\\\Users\\\\conal\\\\Desktop\\\\Weathercraft-Farming\\\\assets\\\\sprites\\\\sample tiles.png''\\); Write-Host $img.Width $img.Height; $img.Dispose\\(\\)\")",
-      "Bash(powershell -File:*)"
+      "Bash(powershell -File:*)",
+      "Bash(grep -E \"\\\\.\\(js|ts|jsx|tsx|json|py|md|yml|yaml|html|css\\)$\")",
+      "Bash(wc -l /c/Users/conal/Desktop/Weathercraft-Farming/js/*.js /c/Users/conal/Desktop/Weathercraft-Farming/js/ui/*.js)",
+      "Bash(wc -l C:UsersconalDesktopWeathercraft-Farmingindex.html C:UsersconalDesktopWeathercraft-Farmingcss*.css C:UsersconalDesktopWeathercraft-Farmingjs*.js C:UsersconalDesktopWeathercraft-Farmingjsui*.js)"
     ]
   }
 }

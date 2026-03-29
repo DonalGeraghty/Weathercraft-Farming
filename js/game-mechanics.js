@@ -67,19 +67,35 @@ function weightedChoice(items) {
 
 function weatherForDay() {
   return weightedChoice([
-    { value: "sun", weight: 0.62 },
-    { value: "rain", weight: 0.38 },
+    { value: "stormy",  weight: 0.2 },
+    { value: "rainy",   weight: 0.2 },
+    { value: "cloudy",  weight: 0.2 },
+    { value: "sunny",   weight: 0.2 },
+    { value: "drought", weight: 0.2 },
   ]);
 }
 
 function weatherIcon(weatherId) {
-  if (weatherId === "rain") return "🌧️";
-  return "☀️";
+  return WEATHER[weatherId]?.icon ?? "☀️";
 }
 
 function maybeChangeWeatherAtSunrise() {
-  if (Math.random() >= NATURAL_WEATHER_FLIP_CHANCE) return;
-  state.weatherId = state.weatherId === "sun" ? "rain" : "sun";
+  const idx = WEATHER_PROGRESSION.indexOf(state.weatherId);
+  const isExtreme = idx === 0 || idx === WEATHER_PROGRESSION.length - 1;
+  const roll = Math.random();
+  if (isExtreme) {
+    // 33% stay, 66% move one step inward
+    if (roll >= 1 / 3) {
+      state.weatherId = WEATHER_PROGRESSION[idx === 0 ? 1 : idx - 1];
+    }
+  } else {
+    // 33% decrease (toward stormy), 33% stay, 33% increase (toward drought)
+    if (roll < 1 / 3) {
+      state.weatherId = WEATHER_PROGRESSION[idx - 1];
+    } else if (roll >= 2 / 3) {
+      state.weatherId = WEATHER_PROGRESSION[idx + 1];
+    }
+  }
 }
 
 function getEffectiveWeatherChangeChance() {
@@ -104,31 +120,31 @@ function applyWeatherMachineAtSunrise() {
 
 // ---- Tile and hazard mechanics ----
 
-function isAdjacentToWaterlogged(x, y) {
+function isAdjacentToWetTerrain(x, y) {
   // Checks for wet neighbors (muddy or flooded) — used for watercress planting rules.
   // Avoid allocations in a hot path: check 4 neighbors directly.
   let nx = x + 1;
   if (nx >= 0 && nx < WORLD_SIZE) {
     const tile = state.tiles[tileIndex(nx, y)];
-    if (tile?.kind === "field" && (tile.terrain === "flooded" || tile.terrain === "muddy")) return true;
+    if (tile?.kind === "field" && TERRAIN[tile.terrain]?.wetness >= 3) return true;
   }
 
   nx = x - 1;
   if (nx >= 0 && nx < WORLD_SIZE) {
     const tile = state.tiles[tileIndex(nx, y)];
-    if (tile?.kind === "field" && (tile.terrain === "flooded" || tile.terrain === "muddy")) return true;
+    if (tile?.kind === "field" && TERRAIN[tile.terrain]?.wetness >= 3) return true;
   }
 
   let ny = y + 1;
   if (ny >= 0 && ny < WORLD_SIZE) {
     const tile = state.tiles[tileIndex(x, ny)];
-    if (tile?.kind === "field" && (tile.terrain === "flooded" || tile.terrain === "muddy")) return true;
+    if (tile?.kind === "field" && TERRAIN[tile.terrain]?.wetness >= 3) return true;
   }
 
   ny = y - 1;
   if (ny >= 0 && ny < WORLD_SIZE) {
     const tile = state.tiles[tileIndex(x, ny)];
-    if (tile?.kind === "field" && (tile.terrain === "flooded" || tile.terrain === "muddy")) return true;
+    if (tile?.kind === "field" && TERRAIN[tile.terrain]?.wetness >= 3) return true;
   }
 
   return false;
@@ -141,7 +157,7 @@ function updateWaterAdjacency() {
     const x = idx % WORLD_SIZE;
     const y = Math.floor(idx / WORLD_SIZE);
     // isAdjacentToWater is true when a neighbor is muddy or flooded.
-    tile.isAdjacentToWater = isAdjacentToWaterlogged(x, y);
+    tile.isAdjacentToWater = isAdjacentToWetTerrain(x, y);
   }
 }
 
@@ -203,7 +219,7 @@ function enforceHazardPlantValidity() {
     if (cropId === "watercress") {
       const x = idx % WORLD_SIZE;
       const y = Math.floor(idx / WORLD_SIZE);
-      if (terrain !== "muddy" && !isAdjacentToWaterlogged(x, y)) {
+      if (TERRAIN[terrain]?.wetness < 3 && !isAdjacentToWetTerrain(x, y)) {
         tile.crop = null;
         tile.readyRotMsRemaining = 0;
         markTileDirtySafe(idx);
@@ -239,67 +255,111 @@ function addTerrainCells(terrain, addCount) {
   }
 }
 
-function addWaterloggedCells(addCount) { addTerrainCells("flooded", addCount); }
-function addScorchedCells(addCount)    { addTerrainCells("arid",        addCount); }
+// Shifts the wetness of `count` random field tiles by `direction` (+1 or -1).
+// Tiles already at the limit in that direction (flooded when +1, desert when -1) are skipped.
+function applyWeatherWetnessShift(count, direction) {
+  const skipTerrain = direction > 0 ? "flooded" : "desert";
+  const candidates = [];
+  for (let i = 0; i < state.tiles.length; i++) {
+    const tile = state.tiles[i];
+    if (tile.kind !== "field") continue;
+    if (tile.terrain === skipTerrain) continue;
+    candidates.push(i);
+  }
+
+  shuffleArrayInPlace(candidates);
+
+  for (const idx of candidates.slice(0, count)) {
+    const tile = state.tiles[idx];
+    const newWetness = TERRAIN[tile.terrain].wetness + direction;
+    tile.terrain = TERRAIN_BY_WETNESS[newWetness];
+    tile.blackMsRemaining = 0;
+    markTileDirtySafe(idx);
+  }
+}
 
 /**
- * Terrain spread rules applied each sunrise:
- * - A grassy tile with 3+ neighbours sharing the same terrain becomes that terrain.
- * - Any tile with 3+ desert neighbours becomes desert.
- * - Any tile with 3+ flooded neighbours becomes flooded.
- * Desert/flooded spread takes priority over the grassy-spread rule.
- * Changes are collected first so one pass cannot cascade into the next.
+ * Terrain spread rules applied each sunrise, based on current weather:
+ *
+ * Stormy/Rainy:
+ *   1. Repeatedly convert any non-flooded tile with 3+ flooded neighbours to flooded
+ *      until no more conversions occur.
+ *   2. Any non-flooded tile adjacent to a flooded tile becomes muddy.
+ *
+ * Sunny/Drought:
+ *   1. Repeatedly convert any non-desert tile with 3+ desert neighbours to desert
+ *      until no more conversions occur.
+ *   2. Any non-desert tile adjacent to a desert tile becomes arid.
+ *
+ * Cloudy: no spread.
+ *
+ * Crop clearing after terrain changes is handled by enforceHazardPlantValidity(),
+ * which is called by the sunrise sequence immediately after this function.
  */
 function applyTerrainSpread() {
+  const weather = state.weatherId;
+  if (weather === "cloudy") return;
+
   const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-  const changes = []; // { idx, terrain }
 
-  for (let idx = 0; idx < state.tiles.length; idx++) {
-    const tile = state.tiles[idx];
-    if (tile.kind !== "field") continue;
-
+  function countNeighbors(idx, terrainId) {
     const x = idx % WORLD_SIZE;
     const y = Math.floor(idx / WORLD_SIZE);
-
-    // Count the terrain of the (up to 4) field neighbours.
-    const counts = {};
+    let n = 0;
     for (const [dx, dy] of DIRS) {
       const nx = x + dx, ny = y + dy;
-      if (!isField(nx, ny)) continue;
-      const t = state.tiles[tileIndex(nx, ny)].terrain;
-      counts[t] = (counts[t] || 0) + 1;
+      if (isField(nx, ny) && state.tiles[tileIndex(nx, ny)].terrain === terrainId) n++;
     }
+    return n;
+  }
 
-    const cur = tile.terrain;
-
-    // Hazard spread (any tile): 3+ desert or flooded neighbours convert the tile.
-    if (cur !== "desert" && (counts["desert"] || 0) >= 3) {
-      changes.push({ idx, terrain: "desert" });
-      continue;
-    }
-    if (cur !== "flooded" && (counts["flooded"] || 0) >= 3) {
-      changes.push({ idx, terrain: "flooded" });
-      continue;
-    }
-
-    // Grassy spread: a grassy tile converts to whichever terrain has 3+ neighbours.
-    if (cur === "grassy") {
-      for (const [terrain, count] of Object.entries(counts)) {
-        if (count >= 3) {
-          changes.push({ idx, terrain });
-          break;
-        }
+  // Phase 1: batch-convert tiles with 3+ hazard neighbours, repeat until stable.
+  function spreadHazard(hazardTerrain) {
+    let anyConverted = true;
+    while (anyConverted) {
+      anyConverted = false;
+      const batch = [];
+      for (let idx = 0; idx < state.tiles.length; idx++) {
+        const tile = state.tiles[idx];
+        if (tile.kind !== "field" || tile.terrain === hazardTerrain) continue;
+        if (countNeighbors(idx, hazardTerrain) >= 3) batch.push(idx);
+      }
+      for (const idx of batch) {
+        state.tiles[idx].terrain = hazardTerrain;
+        markTileDirtySafe(idx);
+        anyConverted = true;
       }
     }
   }
 
-  for (const { idx, terrain } of changes) {
-    const tile = state.tiles[idx];
-    tile.terrain = terrain;
-    tile.crop = null;
-    tile.readyRotMsRemaining = 0;
-    tile.blackMsRemaining = 0;
-    markTileDirtySafe(idx);
+  if (weather === "stormy" || weather === "rainy") {
+    spreadHazard("flooded");
+    // Phase 2: tiles adjacent to flooded shift +1 wetness (capped at muddy; flooded is phase 1).
+    const toWetter = [];
+    for (let idx = 0; idx < state.tiles.length; idx++) {
+      const tile = state.tiles[idx];
+      if (tile.kind !== "field" || tile.terrain === "flooded") continue;
+      if (countNeighbors(idx, "flooded") >= 1) toWetter.push(idx);
+    }
+    for (const idx of toWetter) {
+      const w = TERRAIN[state.tiles[idx].terrain].wetness;
+      state.tiles[idx].terrain = TERRAIN_BY_WETNESS[Math.min(w + 1, 3)];
+      markTileDirtySafe(idx);
+    }
+  } else if (weather === "sunny" || weather === "drought") {
+    spreadHazard("desert");
+    // Phase 2: tiles adjacent to desert shift -1 wetness (capped at arid; desert is phase 1).
+    const toDrier = [];
+    for (let idx = 0; idx < state.tiles.length; idx++) {
+      const tile = state.tiles[idx];
+      if (tile.kind !== "field" || tile.terrain === "desert") continue;
+      if (countNeighbors(idx, "desert") >= 1) toDrier.push(idx);
+    }
+    for (const idx of toDrier) {
+      const w = TERRAIN[state.tiles[idx].terrain].wetness;
+      state.tiles[idx].terrain = TERRAIN_BY_WETNESS[Math.max(w - 1, 1)];
+      markTileDirtySafe(idx);
+    }
   }
 }
 
@@ -309,7 +369,6 @@ function applyTerrainSpread() {
  * Must run after state.weatherId is set and before the grid DOM is built.
  */
 function applyRandomFieldStart() {
-  // TEST: spawn 10 tiles of each terrain type at game start
   addTerrainCells("arid",        10);
   addTerrainCells("desert",      10);
   addTerrainCells("muddy",       10);
@@ -365,7 +424,7 @@ function growAllCrops(dtMs) {
   const MS_PER_GROWTH_DAY = (15 / 24) * MS_PER_DAY;
   const growthThisTick = dtMs / MS_PER_GROWTH_DAY;
 
-  const weatherDef = WEATHER[state.weatherId] ?? WEATHER.sun;
+  const weatherDef = WEATHER[state.weatherId] ?? WEATHER.sunny;
   const globalMultiplier = weatherDef.growthMultiplier;
 
   for (let idx = 0; idx < state.tiles.length; idx++) {
@@ -383,9 +442,9 @@ function growAllCrops(dtMs) {
 
     // Environment effects (wet adjacency / arid on-tile).
     let envMult = 1;
-    if (cropDef.adjacentWaterloggedGrowthMultiplier) {
+    if (cropDef.adjacentFloodedGrowthMultiplier) {
       if (tile.isAdjacentToWater) {
-        envMult *= cropDef.adjacentWaterloggedGrowthMultiplier;
+        envMult *= cropDef.adjacentFloodedGrowthMultiplier;
       }
     }
     if (cropDef.aridGrowthMultiplier) {

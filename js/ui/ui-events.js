@@ -35,6 +35,18 @@ function bindUi() {
     addUiDisposer(() => pauseBtn.removeEventListener("click", onPauseClick));
   }
 
+  const skipTo7amBtn = document.getElementById("skip-to-7am-btn");
+  if (skipTo7amBtn) {
+    const onSkipTo7am = () => {
+      state.roosterPlayedToday = false;
+      state.dayElapsedMs = ROOSTER_THRESHOLD_MS;
+      processSunriseIfNeeded();
+      emitUiSync({ hud: true });
+    };
+    skipTo7amBtn.addEventListener("click", onSkipTo7am);
+    addUiDisposer(() => skipTo7amBtn.removeEventListener("click", onSkipTo7am));
+  }
+
   // Allow holding Space/E to plant/harvest continuously while moving.
   let holdingPlant = false; // Space
   let holdingHarvest = false; // E
@@ -82,8 +94,9 @@ function bindUi() {
   setPaused(state.paused);
 
   // Cache frequently-updated UI elements once.
-  weatherMachineSunButtonElement = document.getElementById("weather-machine-sun-btn");
-  weatherMachineRainButtonElement = document.getElementById("weather-machine-rain-btn");
+  for (const id of Object.keys(WEATHER)) {
+    weatherMachineButtonElements[id] = document.getElementById(`weather-machine-${id}-btn`);
+  }
   weatherMachineInfoElement = document.getElementById("weather-machine-info");
   shopSeedInfoElement = document.getElementById("seed-info");
   inventoryGridElement = document.getElementById("inventory-grid");
@@ -141,25 +154,18 @@ function setupSeedPurchaseUi(tryBuySelectedSeed) {
 }
 
 function setupWeatherMachineUiHandlers(commitWeatherMachineSpend) {
-  const sunBtn = document.getElementById("weather-machine-sun-btn");
-  const rainBtn = document.getElementById("weather-machine-rain-btn");
-  if (sunBtn) {
-    const onSunClick = () => {
-      if (state.sunriseTransition || !isAtWeatherMachineTile()) return;
-      state.weatherMachineSelection = "sun";
-      commitWeatherMachineSpend(WEATHER_SPEND_UNIT_EUR);
-    };
-    sunBtn.addEventListener("click", onSunClick);
-    addUiDisposer(() => sunBtn.removeEventListener("click", onSunClick));
-  }
-  if (rainBtn) {
-    const onRainClick = () => {
-      if (state.sunriseTransition || !isAtWeatherMachineTile()) return;
-      state.weatherMachineSelection = "rain";
-      commitWeatherMachineSpend(WEATHER_SPEND_UNIT_EUR);
-    };
-    rainBtn.addEventListener("click", onRainClick);
-    addUiDisposer(() => rainBtn.removeEventListener("click", onRainClick));
+  for (const id of Object.keys(WEATHER)) {
+    const btn = document.getElementById(`weather-machine-${id}-btn`);
+    if (btn) {
+      const weatherId = id;
+      const onBtnClick = () => {
+        if (state.sunriseTransition || !isAtWeatherMachineTile()) return;
+        state.weatherMachineSelection = weatherId;
+        commitWeatherMachineSpend(WEATHER_SPEND_UNIT_EUR);
+      };
+      btn.addEventListener("click", onBtnClick);
+      addUiDisposer(() => btn.removeEventListener("click", onBtnClick));
+    }
   }
 }
 

@@ -127,9 +127,9 @@ Each sunrise, **3–5 field tiles** are converted to the active weather's hazard
 | Weather | Hazard | Effect on crops |
 |---------|--------|-----------------|
 | Sun | Scorched (orange) | Destroys all crops **except** Cactus Fruit; Cactus Fruit can only be planted here |
-| Rain | Waterlogged (blue) | Destroys all crops; Watercress is also destroyed if its own tile becomes flooded (it survives only on adjacent dry tiles) |
+| Rain | Flooded (blue) | Destroys all crops; Watercress is also destroyed if its own tile becomes flooded (it survives only on adjacent dry tiles) |
 
-Waterlogged and scorched are mutually exclusive on any single tile — if both would apply, flooded takes priority. When a new hazard is placed, the opposite hazard is cleared within 2 tiles of it.
+Flooded and scorched are mutually exclusive on any single tile — if both would apply, flooded takes priority. When a new hazard is placed, the opposite hazard is cleared within 2 tiles of it.
 
 ### Strategy tips
 
@@ -147,7 +147,7 @@ Waterlogged and scorched are mutually exclusive on any single tile — if both w
 | Tile state | Cause | Duration | Can plant? |
 |-----------|-------|----------|-----------|
 | Normal | — | — | Yes |
-| Waterlogged | Rain hazard at sunrise | Persists until a sun sunrise removes it | No |
+| Flooded | Rain hazard at sunrise | Persists until a sun sunrise removes it | No |
 | Scorched | Sun hazard at sunrise | Persists until a rain sunrise removes it | Only Cactus Fruit |
 | Black | Crop rotted unharvested | 1 full in-game day (100 sec) | No |
 

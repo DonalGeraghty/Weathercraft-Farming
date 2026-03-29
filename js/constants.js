@@ -24,7 +24,7 @@ const CROPS = {
     id: "carrot",
     name: "Carrot",
     daysToGrow: 6,
-    weatherGrowthMultipliers: { sun: 1.35, rain: 0.7 },
+    weatherGrowthMultipliers: { stormy: 0.5, rainy: 0.7, cloudy: 1.0, sunny: 1.35, drought: 0.9 },
     seedCost: 3,
     harvestValue: 8,
   },
@@ -32,7 +32,7 @@ const CROPS = {
     id: "onion",
     name: "Onion",
     daysToGrow: 8,
-    weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
+    weatherGrowthMultipliers: { stormy: 0.9, rainy: 1.1, cloudy: 1.1, sunny: 0.9, drought: 0.8 },
     seedCost: 4,
     harvestValue: 10,
   },
@@ -40,7 +40,7 @@ const CROPS = {
     id: "cabbage",
     name: "Cabbage",
     daysToGrow: 10,
-    weatherGrowthMultipliers: { sun: 0.7, rain: 1.35 },
+    weatherGrowthMultipliers: { stormy: 1.2, rainy: 1.35, cloudy: 1.1, sunny: 0.7, drought: 0.5 },
     seedCost: 5,
     harvestValue: 13,
   },
@@ -48,17 +48,17 @@ const CROPS = {
     id: "watercress",
     name: "Watercress",
     daysToGrow: 10,
-    weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
+    weatherGrowthMultipliers: { stormy: 1.0, rainy: 1.0, cloudy: 1.0, sunny: 1.0, drought: 1.0 },
     seedCost: 6,
     harvestValue: 16,
     // Extra growth when adjacent to flooded cells.
-    adjacentWaterloggedGrowthMultiplier: 4.0,
+    adjacentFloodedGrowthMultiplier: 4.0,
   },
   cactusfruit: {
     id: "cactusfruit",
     name: "Cactus Fruit",
     daysToGrow: 10,
-    weatherGrowthMultipliers: { sun: 1.0, rain: 1.0 },
+    weatherGrowthMultipliers: { stormy: 0.5, rainy: 0.7, cloudy: 0.9, sunny: 1.2, drought: 1.4 },
     seedCost: 8,
     harvestValue: 22,
     // Extra growth when planted directly on arid soil.
@@ -66,13 +66,29 @@ const CROPS = {
   },
 };
 
-const WEATHER = {
-  sun: { id: "sun", name: "Sun", growthMultiplier: 1.0 },
-  rain: { id: "rain", name: "Rain", growthMultiplier: 1.35 },
+const TERRAIN = {
+  desert:  { id: "desert",  wetness: 0 },
+  arid:    { id: "arid",    wetness: 1 },
+  grassy:  { id: "grassy",  wetness: 2 },
+  muddy:   { id: "muddy",   wetness: 3 },
+  flooded: { id: "flooded", wetness: 4 },
 };
 
-// At each sunrise, sun/rain may flip on its own (in addition to the weather machine).
-const NATURAL_WEATHER_FLIP_CHANCE = 0.2;
+// Indexed by wetness value (0–4): gives the terrain id at that wetness level.
+const TERRAIN_BY_WETNESS = ["desert", "arid", "grassy", "muddy", "flooded"];
+
+const WEATHER = {
+  // growthMultiplier is currently flat 1.0 across all weather — per-weather scaling may be revisited.
+  stormy:  { id: "stormy",  name: "Stormy",  growthMultiplier: 1.0, icon: "⛈️",  cssClass: "text--stormy"  },
+  rainy:   { id: "rainy",   name: "Rainy",   growthMultiplier: 1.0, icon: "🌧️",  cssClass: "text--rainy"   },
+  cloudy:  { id: "cloudy",  name: "Cloudy",  growthMultiplier: 1.0, icon: "☁️",  cssClass: "text--cloudy"  },
+  sunny:   { id: "sunny",   name: "Sunny",   growthMultiplier: 1.0, icon: "☀️",  cssClass: "text--sunny"   },
+  drought: { id: "drought", name: "Drought", growthMultiplier: 1.0, icon: "🔥",  cssClass: "text--drought" },
+};
+
+// Weather transitions at sunrise follow this progression (adjacent steps only).
+const WEATHER_PROGRESSION = ["stormy", "rainy", "cloudy", "sunny", "drought"];
+
 // Weather machine: each € committed adds +1% chance to apply the selected weather at sunrise.
 const WEATHER_CHANGE_CHANCE_PER_EURO = 0.01;
 const WEATHER_SPEND_UNIT_EUR = 10;

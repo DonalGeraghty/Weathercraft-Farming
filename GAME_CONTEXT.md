@@ -166,7 +166,7 @@ progressDelta  = (1/daysToGrow) × globalWeatherMult × cropWeatherMult × envMu
 - `maybeChangeWeatherAtSunrise()` — 20% chance to flip weather naturally (`NATURAL_WEATHER_FLIP_CHANCE`)
 - `applyWeatherMachineAtSunrise()` — applies committed spend as a probability; resets `weatherMachineSpendCommitted` to 0
 - `addHazardCells(type, count)` — shuffles eligible tiles, applies hazard, clears opposite hazard within 2 tiles
-- `addWaterloggedCells(n)` / `addScorchedCells(n)` — wrappers; called with 3 (if weather swapped) or 5 (if same)
+- `addFloodedCells(n)` / `addScorchedCells(n)` — wrappers; called with 3 (if weather swapped) or 5 (if same)
 - `updateWaterAdjacency()` — must be called after ANY flooded change to keep `isAdjacentToWater` accurate
 - `setWeatherTheme()` (in `dog.js` physically) — toggles `.weather--rain` on `.game-wrap`, triggers ambience sync
 
